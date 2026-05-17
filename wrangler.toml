@@ -1,0 +1,26 @@
+name = "korea-memory-price-monitor"
+main = "src/worker.ts"
+compatibility_date = "2026-05-17"
+workers_dev = true
+
+[[routes]]
+pattern = "dram.789567.xyz"
+custom_domain = true
+
+[assets]
+directory = "./dist/client"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "korea_memory_monitor"
+database_id = "1f89c506-2178-4480-8410-8e2c43206902"
+migrations_dir = "migrations"
+
+[triggers]
+crons = ["0 2 16,18,21 * *"]
+
+[vars]
+HISTORY_MONTHS = "1"
+SCRAPE_DELAY_MS = "250"
