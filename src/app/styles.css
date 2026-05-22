@@ -1104,6 +1104,81 @@ button:focus-visible {
   text-align: right;
 }
 
+.flow-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(216, 214, 223, 0.78);
+  border-radius: 6px;
+  background: var(--porcelain);
+  color: var(--slate);
+  font-size: 12px;
+}
+
+.flow-strip strong {
+  color: var(--ink);
+  font-weight: 400;
+}
+
+.flow-strip span {
+  min-height: 24px;
+  padding: 4px 8px;
+  border: 1px solid rgba(216, 214, 223, 0.68);
+  border-radius: 4px;
+  background: var(--white);
+}
+
+.ipo-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgba(216, 214, 223, 0.78);
+  border-radius: 6px;
+  background: var(--white);
+}
+
+.ipo-filter-bar > svg {
+  margin: 0 4px;
+  color: var(--slate);
+}
+
+.ipo-filter-bar button,
+.ipo-pulse-actions button,
+.ipo-row-actions button,
+.ipo-row-actions a,
+.ipo-card-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(216, 214, 223, 0.78);
+  border-radius: 4px;
+  background: var(--porcelain);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.ipo-filter-bar button.active {
+  border-color: rgba(83, 58, 253, 0.28);
+  background: rgba(83, 58, 253, 0.08);
+  color: var(--violet);
+}
+
+.ipo-filter-bar strong {
+  color: inherit;
+  font-weight: 400;
+}
+
 .ipo-pulse-list {
   display: grid;
   gap: 10px;
@@ -1124,6 +1199,17 @@ button:focus-visible {
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+}
+
+.ipo-card-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ipo-card-actions button {
+  width: 32px;
+  padding: 0;
 }
 
 .ipo-pulse-title span,
@@ -1167,6 +1253,59 @@ button:focus-visible {
   gap: 10px;
   padding-top: 8px;
   border-top: 1px solid rgba(229, 237, 245, 0.92);
+}
+
+.ipo-allocation-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ipo-allocation-grid.expanded {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.ipo-allocation-card {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid rgba(216, 214, 223, 0.72);
+  border-radius: 4px;
+  background: var(--porcelain);
+}
+
+.ipo-allocation-card span,
+.ipo-allocation-card em {
+  color: var(--slate);
+  font-size: 11px;
+  font-style: normal;
+}
+
+.ipo-allocation-card strong {
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.ipo-pulse-actions,
+.ipo-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ipo-pulse-actions button:hover,
+.ipo-row-actions button:hover,
+.ipo-row-actions a:hover,
+.ipo-card-actions button:hover {
+  border-color: rgba(83, 58, 253, 0.28);
+  color: var(--violet);
+}
+
+.flip {
+  transform: rotate(180deg);
 }
 
 .source-list {
@@ -1214,7 +1353,7 @@ button:focus-visible {
 
 .ipo-calendar-row {
   display: grid;
-  grid-template-columns: minmax(118px, 1.1fr) 86px minmax(116px, 1fr) minmax(112px, 1fr) minmax(116px, 1fr) minmax(92px, 0.75fr);
+  grid-template-columns: minmax(118px, 1.1fr) 86px minmax(116px, 1fr) minmax(112px, 1fr) minmax(116px, 1fr) minmax(92px, 0.75fr) minmax(116px, 0.78fr);
   gap: 10px;
   align-items: center;
   min-height: 56px;
@@ -1243,6 +1382,131 @@ button:focus-visible {
   color: var(--ink);
   font-size: 13px;
   line-height: 1.38;
+}
+
+.ipo-timeline-panel {
+  overflow: hidden;
+}
+
+.timeline-range {
+  color: var(--slate);
+  font-size: 12px;
+}
+
+.ipo-timeline-scroll {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.ipo-timeline-head,
+.ipo-timeline-line {
+  display: grid;
+  align-items: stretch;
+  min-width: max-content;
+}
+
+.ipo-timeline-head {
+  border-bottom: 1px solid rgba(229, 237, 245, 0.92);
+}
+
+.ipo-timeline-head > strong {
+  display: grid;
+  place-items: center;
+  min-height: 46px;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.ipo-timeline-head em {
+  color: var(--slate);
+  font-size: 10px;
+  font-style: normal;
+}
+
+.ipo-timeline-head .today {
+  background: rgba(83, 58, 253, 0.08);
+  color: var(--violet);
+}
+
+.ipo-timeline-line {
+  min-height: 42px;
+  border-bottom: 1px solid rgba(229, 237, 245, 0.72);
+}
+
+.ipo-timeline-line:last-child {
+  border-bottom: 0;
+}
+
+.timeline-company {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  padding: 8px 10px;
+  color: var(--ink);
+}
+
+.timeline-company b {
+  font-weight: 400;
+}
+
+.timeline-company em {
+  color: var(--slate);
+  font-size: 11px;
+  font-style: normal;
+}
+
+.timeline-cell {
+  display: grid;
+  place-items: center;
+  min-height: 42px;
+  border-left: 1px solid rgba(229, 237, 245, 0.72);
+  color: var(--white);
+  font-size: 11px;
+}
+
+.phase-subscribe {
+  background: rgba(83, 58, 253, 0.18);
+}
+
+.phase-cash {
+  background: rgba(129, 184, 26, 0.22);
+  color: #436408;
+}
+
+.phase-dark {
+  background: rgba(255, 97, 24, 0.18);
+  color: var(--orange);
+}
+
+.phase-listing {
+  background: rgba(83, 58, 253, 0.86);
+}
+
+.phase-key {
+  background: rgba(80, 97, 122, 0.78);
+}
+
+.timeline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+  color: var(--slate);
+  font-size: 12px;
+}
+
+.timeline-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.timeline-legend i {
+  display: inline-block;
+  width: 14px;
+  height: 8px;
+  border-radius: 3px;
 }
 
 .status-chip.live {
@@ -1329,6 +1593,80 @@ button:focus-visible {
   color: var(--slate);
   font-size: 12px;
   line-height: 1.45;
+}
+
+.ipo-calculator-panel {
+  min-width: 0;
+}
+
+.calculator-target {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 10px;
+  border: 1px solid rgba(216, 214, 223, 0.72);
+  border-radius: 4px;
+  background: var(--porcelain);
+}
+
+.calculator-target strong {
+  color: var(--ink);
+  font-weight: 400;
+}
+
+.calculator-target span {
+  color: var(--slate);
+  font-size: 12px;
+}
+
+.lot-slider {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr) 88px;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+  color: var(--slate);
+  font-size: 12px;
+}
+
+.lot-slider input[type="range"] {
+  width: 100%;
+}
+
+.lot-slider input[type="number"] {
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 8px;
+  border: 1px solid rgba(216, 214, 223, 0.86);
+  border-radius: 4px;
+  background: var(--white);
+  color: var(--ink);
+}
+
+.faq-list {
+  display: grid;
+  gap: 8px;
+}
+
+.faq-list details {
+  border: 1px solid rgba(216, 214, 223, 0.72);
+  border-radius: 4px;
+  background: var(--porcelain);
+}
+
+.faq-list summary {
+  cursor: pointer;
+  padding: 10px 12px;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.faq-list p {
+  margin: 0;
+  padding: 0 12px 12px;
+  color: var(--slate);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .status-chip {
@@ -1647,6 +1985,7 @@ button:focus-visible {
   .calendar-row,
   .timeline-row,
   .ipo-calendar-row,
+  .ipo-calendar-row.header,
   .ipo-event-row {
     grid-template-columns: 1fr;
   }
@@ -1658,6 +1997,9 @@ button:focus-visible {
   .workflow-grid,
   .heat-row,
   .ipo-pulse-metrics,
+  .ipo-allocation-grid,
+  .ipo-allocation-grid.expanded,
+  .lot-slider,
   .source-row {
     grid-template-columns: 1fr;
   }
