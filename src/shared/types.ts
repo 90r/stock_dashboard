@@ -121,3 +121,63 @@ export interface ApiError {
   error: string;
   detail?: string;
 }
+
+export interface IpoCalendarEvent {
+  date: string;
+  code: string;
+  label: string;
+}
+
+export interface IpoCalendarItem {
+  symbol: string;
+  symbolHk: string;
+  name: string;
+  subscriptionOpen: string | null;
+  subscriptionClose: string | null;
+  priceFixedDate: string | null;
+  allotmentDate: string | null;
+  listingDate: string | null;
+  listingLabel: string | null;
+  aastocksUrl: string | null;
+  offerPriceHkd: number | null;
+  offerPriceRange: string | null;
+  lotSize: number | null;
+  entryFeeHkd: number | null;
+  events: IpoCalendarEvent[];
+}
+
+export interface IpoMarginRecord {
+  symbol: string;
+  symbolHk: string;
+  name: string;
+  marginTotalHkdYi: number | null;
+  oversubscriptionRatio: number | null;
+  brokerTopText: string | null;
+  observedAt: string | null;
+  scrapedAt: string | null;
+  sourceUrl: string | null;
+}
+
+export interface IpoTrackerResponse {
+  generatedAt: string;
+  generatedAtUtc: string | null;
+  source: string;
+  sourceUrl: string;
+  sourcePageUrl: string;
+  timezone: string;
+  grid: {
+    startDate: string | null;
+    endDate: string | null;
+    dates: string[];
+  };
+  eventLegend: Record<string, { en?: string; zh?: string; "zh-hk"?: string }>;
+  ipos: IpoCalendarItem[];
+  count: number;
+  margin: {
+    generatedAt: string | null;
+    source: string;
+    sourceUrl: string;
+    count: number;
+    records: IpoMarginRecord[];
+  };
+}

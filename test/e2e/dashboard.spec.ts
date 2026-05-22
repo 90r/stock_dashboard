@@ -229,12 +229,75 @@ const snapshot = {
   }
 };
 
+const ipoTracker = {
+  generatedAt: "2026-05-22T16:25:03.821Z",
+  generatedAtUtc: "2026-05-22T16:25:03.821Z",
+  source: "AAStocks HK IPO Calendar",
+  sourceUrl: "http://www.aastocks.com/tc/stocks/market/ipo/ipocalendar.aspx",
+  sourcePageUrl: "https://www.lowrisktradesmart.org/zh/tools/ipo-tracker",
+  timezone: "Asia/Hong_Kong",
+  grid: {
+    startDate: "2026-05-16",
+    endDate: "2026-05-30",
+    dates: ["2026-05-16", "2026-05-17"]
+  },
+  eventLegend: {
+    O: { zh: "招股开始" },
+    A: { zh: "公布中签" },
+    L: { zh: "上市日" }
+  },
+  count: 1,
+  ipos: [
+    {
+      symbol: "03310",
+      symbolHk: "03310.HK",
+      name: "雲英谷科技",
+      subscriptionOpen: "2026-05-18",
+      subscriptionClose: "2026-05-21",
+      priceFixedDate: "2026-05-18",
+      allotmentDate: "2026-05-26",
+      listingDate: "2026-05-27",
+      listingLabel: "4日後上市",
+      aastocksUrl: "http://www.aastocks.com/tc/stocks/market/ipo/upcomingipo/company-summary?symbol=03310",
+      offerPriceHkd: 20.81,
+      offerPriceRange: null,
+      lotSize: 200,
+      entryFeeHkd: 4203.98,
+      events: [
+        { date: "2026-05-18", code: "O", label: "Subscription opens" },
+        { date: "2026-05-26", code: "A", label: "Allotment results" },
+        { date: "2026-05-27", code: "L", label: "Listing day" }
+      ]
+    }
+  ],
+  margin: {
+    generatedAt: "2026-05-22T16:24:58.634Z",
+    source: "AiPO (myiqdii.com)",
+    sourceUrl: "https://aipo.myiqdii.com/trasaction/index",
+    count: 1,
+    records: [
+      {
+        symbol: "03310",
+        symbolHk: "03310.HK",
+        name: "云英谷科技",
+        marginTotalHkdYi: 4563.21765,
+        oversubscriptionRatio: 4146.81,
+        brokerTopText: "辉立证券: 401亿",
+        observedAt: "2026-05-21T03:48:15.000Z",
+        scrapedAt: "2026-05-21T04:05:39.469Z",
+        sourceUrl: "https://aipo.myiqdii.com/Trasaction/MarginDetails?symbol=03310"
+      }
+    ]
+  }
+};
+
 test.beforeEach(async ({ page }) => {
   await page.route("**/api/snapshot", (route) => route.fulfill({ json: snapshot }));
+  await page.route("**/api/ipo", (route) => route.fulfill({ json: ipoTracker }));
 });
 
 test("renders charts, category switch, and destination split", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/memory");
 
   await expect(page.getByRole("heading", { name: "韩国存储价格监控器" })).toBeVisible();
   const categoryTabs = page.getByRole("tablist", { name: "category" });
@@ -244,4 +307,15 @@ test("renders charts, category switch, and destination split", async ({ page }) 
   await expect(page.getByRole("heading", { name: "MCP-HBM MoM" })).toBeVisible();
   await expect(page.locator(".destination-table").getByText("대만（中国台湾）")).toBeVisible();
   await expect(page.locator(".recharts-wrapper").first()).toBeVisible();
+});
+
+test("renders IPO calendar and margin pulse from API data", async ({ page }) => {
+  await page.goto("/ipo");
+
+  await expect(page.getByRole("heading", { name: "港股 IPO 监控雷达" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "孖展实时脉搏" })).toBeVisible();
+  await expect(page.getByText("03310.HK").first()).toBeVisible();
+  await expect(page.locator(".ipo-calendar-table").getByText("雲英谷科技", { exact: true })).toBeVisible();
+  await expect(page.getByText("4,147x").first()).toBeVisible();
+  await expect(page.getByText("AAStocks HK IPO Calendar")).toBeVisible();
 });

@@ -9,13 +9,15 @@ import {
   parseNumericValue
 } from "../src/worker/scrapers/kita";
 import { parseNaverDailyHtml, selectMonthEndCloses } from "../src/worker/scrapers/naver";
+import { parseTradesmartIpoHtml } from "../src/worker/scrapers/tradesmart-ipo";
 import {
   FRANKFURTER_EXCHANGE_RATE_JSON,
   KITA_DEST_AMT_XML,
   KITA_DEST_WGT_XML,
   KITA_ITEM_AMT_XML,
   KITA_ITEM_WGT_XML,
-  NAVER_HTML
+  NAVER_HTML,
+  TRADESMART_IPO_HTML
 } from "./fixtures";
 
 describe("K-stat parser", () => {
@@ -106,5 +108,28 @@ describe("exchange-rate parser", () => {
       { month: "2026-02", rateDate: "2026-02-28", usdCny: 6.82, cnyKrw: 210, source: "Frankfurter" },
       { month: "2026-03", rateDate: "2026-03-31", usdCny: 6.8628, cnyKrw: 217.09, source: "Frankfurter" }
     ]);
+  });
+});
+
+describe("TradeSmart IPO parser", () => {
+  it("extracts IPO calendar and margin records from Next.js flight chunks", () => {
+    const tracker = parseTradesmartIpoHtml(TRADESMART_IPO_HTML);
+
+    expect(tracker.generatedAt).toBe("2026-05-22T16:25:03.821Z");
+    expect(tracker.ipos).toHaveLength(1);
+    expect(tracker.ipos[0]).toMatchObject({
+      symbol: "03310",
+      symbolHk: "03310.HK",
+      name: "雲英谷科技",
+      subscriptionOpen: "2026-05-18",
+      listingDate: "2026-05-27",
+      entryFeeHkd: 4203.98
+    });
+    expect(tracker.margin.records[0]).toMatchObject({
+      symbol: "03310",
+      marginTotalHkdYi: 4563.21765,
+      oversubscriptionRatio: 4146.81,
+      brokerTopText: "辉立证券: 401亿"
+    });
   });
 });

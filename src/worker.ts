@@ -2,6 +2,7 @@ import type { ApiError } from "./shared/types";
 import { buildSnapshot } from "./worker/snapshot";
 import type { Env } from "./worker/env";
 import { refreshSnapshot } from "./worker/refresh";
+import { fetchTradesmartIpoTracker } from "./worker/scrapers/tradesmart-ipo";
 
 const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
@@ -21,6 +22,14 @@ export default {
         return json(await buildSnapshot(env));
       } catch (error) {
         return jsonError("Snapshot unavailable", error, 500);
+      }
+    }
+
+    if (url.pathname === "/api/ipo" && request.method === "GET") {
+      try {
+        return json(await fetchTradesmartIpoTracker());
+      } catch (error) {
+        return jsonError("IPO data unavailable", error, 502);
       }
     }
 
@@ -44,7 +53,12 @@ export default {
       return jsonError("Method not allowed", "Use POST; GET refresh is only enabled on localhost", 405);
     }
 
-    return env.ASSETS.fetch(request);
+    const assetResponse = await env.ASSETS.fetch(request);
+    if (assetResponse.status !== 404 || url.pathname.includes(".")) {
+      return assetResponse;
+    }
+
+    return env.ASSETS.fetch(new Request(new URL("/", url), request));
   },
 
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {

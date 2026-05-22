@@ -4,7 +4,7 @@ compatibility_date = "2026-05-17"
 workers_dev = true
 
 [[routes]]
-pattern = "dram.789567.xyz"
+pattern = "stock.789567.xyz"
 custom_domain = true
 
 [assets]
