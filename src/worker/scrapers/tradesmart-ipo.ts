@@ -1,4 +1,4 @@
-import type { IpoCalendarItem, IpoMarginRecord, IpoTrackerResponse } from "../../shared/types";
+import type { AShareIpoResponse, IpoCalendarItem, IpoMarginRecord, IpoTrackerResponse } from "../../shared/types";
 import { fetchTextWithRetry, type Fetcher } from "./http";
 
 const TRADESMART_IPO_URL = "https://www.lowrisktradesmart.org/zh/tools/ipo-tracker";
@@ -67,7 +67,7 @@ interface RawMarginRecord {
   source_url?: string | null;
 }
 
-export async function fetchTradesmartIpoTracker(fetcher: Fetcher = fetch): Promise<IpoTrackerResponse> {
+export async function fetchTradesmartIpoTracker(fetcher: Fetcher = fetch, aShare?: AShareIpoResponse | null): Promise<IpoTrackerResponse> {
   const html = await fetchTextWithRetry(
     fetcher,
     TRADESMART_IPO_URL,
@@ -82,7 +82,7 @@ export async function fetchTradesmartIpoTracker(fetcher: Fetcher = fetch): Promi
     { timeoutMs: 15_000, retries: 1, retryDelayMs: 600 }
   );
 
-  return parseTradesmartIpoHtml(html);
+  return { ...parseTradesmartIpoHtml(html), aShare };
 }
 
 export function parseTradesmartIpoHtml(html: string): IpoTrackerResponse {
@@ -219,7 +219,8 @@ function normalizeIpoData(raw: RawIpoData): IpoTrackerResponse {
       sourceUrl: raw.margin?.source_url ?? "https://aipo.myiqdii.com/trasaction/index",
       count: raw.margin?.count ?? marginRecords.length,
       records: marginRecords
-    }
+    },
+    aShare: null
   };
 }
 

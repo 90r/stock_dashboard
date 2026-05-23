@@ -288,6 +288,97 @@ const ipoTracker = {
         sourceUrl: "https://aipo.myiqdii.com/Trasaction/MarginDetails?symbol=03310"
       }
     ]
+  },
+  aShare: {
+    generatedAt: "2026-05-23T07:40:00.000Z",
+    source: "投行之声",
+    sourceUrl: "https://www.iposeek.com/aipo/api/v1/newShareIssuanceInfos",
+    sourcePageUrl: "https://www.iposeek.com/ipo-review/new-stock",
+    timezone: "Asia/Shanghai",
+    page: 1,
+    size: 20,
+    total: 1644,
+    count: 2,
+    filters: { board: "全部", issuanceStatus: "全部", sort: "issuanceStartDate", order: "desc" },
+    boardCounts: { 北证: 316, 科创板: 612, 主板: 113, 创业板: 600 },
+    statusCounts: { 启动发行: 2, 发行失败: 2, 发行成功: 1640 },
+    error: null,
+    items: [
+      {
+        id: 108393,
+        projectId: 1003995,
+        sequenceNo: 1,
+        shareCode: "301669",
+        shareName: "高特电子",
+        companyChineseName: "杭州高特电子设备股份有限公司",
+        place: "深交所",
+        board: "创业板",
+        issuanceStatus: "发行中",
+        pricingMechanism: "询价发行",
+        issuanceStartDate: "2026-05-21",
+        listDate: null,
+        issuancePrice: null,
+        issuanceNumber: null,
+        strategicPlacementNumber: null,
+        peRatio: null,
+        totalProceeds: null,
+        issuanceCosts: null,
+        sponsorshipFee: null,
+        auditFee: null,
+        lawyerFee: null,
+        disclosureFee: null,
+        processingFee: null,
+        auditDays: 226,
+        registrationValidDate: "2026-02-04",
+        issuanceCostsRatio: null,
+        sponsorshipFeeRatio: null,
+        auditFeeRatio: null,
+        lawyerFeeRatio: null,
+        disclosureFeeRatio: null,
+        processingFeeRatio: null,
+        sponsor: null,
+        accountingFirm: null,
+        lawFirm: null,
+        detailUrl: "https://www.iposeek.com/ipo-review/new-stock/108393"
+      },
+      {
+        id: 103774,
+        projectId: 1003978,
+        sequenceNo: 2,
+        shareCode: "001237",
+        shareName: "惠康科技",
+        companyChineseName: "宁波惠康工业科技股份有限公司",
+        place: "深交所",
+        board: "主板",
+        issuanceStatus: "发行成功",
+        pricingMechanism: "询价发行",
+        issuanceStartDate: "2026-04-30",
+        listDate: "2026-05-22",
+        issuancePrice: "53.26",
+        issuanceNumber: "3,708.79",
+        strategicPlacementNumber: "0.00",
+        peRatio: "21.04",
+        totalProceeds: "197,529.93",
+        issuanceCosts: "16,919.15",
+        sponsorshipFee: "13,018.34",
+        auditFee: "2,225.00",
+        lawyerFee: "1,071.70",
+        disclosureFee: "541.98",
+        processingFee: "62.13",
+        auditDays: 286,
+        registrationValidDate: "2026-03-25",
+        issuanceCostsRatio: "8.57%",
+        sponsorshipFeeRatio: "6.59%",
+        auditFeeRatio: "1.13%",
+        lawyerFeeRatio: "0.54%",
+        disclosureFeeRatio: "0.27%",
+        processingFeeRatio: "0.03%",
+        sponsor: null,
+        accountingFirm: null,
+        lawFirm: null,
+        detailUrl: "https://www.iposeek.com/ipo-review/new-stock/103774"
+      }
+    ]
   }
 };
 
@@ -312,10 +403,21 @@ test("renders charts, category switch, and destination split", async ({ page }) 
 test("renders IPO calendar and margin pulse from API data", async ({ page }) => {
   await page.goto("/ipo");
 
-  await expect(page.getByRole("heading", { name: "港股 IPO 监控雷达" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "IPO 监控雷达" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "孖展实时脉搏" })).toBeVisible();
   await expect(page.getByText("03310.HK").first()).toBeVisible();
   await expect(page.locator(".ipo-calendar-table").getByText("雲英谷科技", { exact: true })).toBeVisible();
   await expect(page.getByText("4,147x").first()).toBeVisible();
   await expect(page.getByText("AAStocks HK IPO Calendar")).toBeVisible();
+});
+
+test("renders A-share IPO issuance dynamics beside HK IPO", async ({ page }) => {
+  await page.goto("/ipo");
+
+  await page.getByRole("button", { name: "A股发行动态" }).click();
+  await expect(page.getByRole("heading", { name: "A股发行动态" })).toBeVisible();
+  await expect(page.getByText("高特电子")).toBeVisible();
+  await expect(page.getByText("惠康科技")).toBeVisible();
+  await expect(page.getByText("发行动态总数")).toBeVisible();
+  await expect(page.getByRole("link", { name: "投行之声", exact: true })).toBeVisible();
 });

@@ -26,6 +26,16 @@ npm run db:migrate:local
 npm run cf:dev
 ```
 
+IPO 模块里的 A 股“发行动态”来自投行之声，需要在本地或生产 Worker 中配置其中一个登录变量：
+
+```bash
+IPOSEEK_COOKIE="<full cookie>"
+# 或
+IPOSEEK_ACCESS_TOKEN="<access_token>"
+```
+
+本地可放在 `.env.local` 并用 `npx wrangler dev --env-file .env.local` 启动；生产环境用 Wrangler secrets 配置，不要写入前端代码。
+
 前端开发服务器：
 
 ```bash

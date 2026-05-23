@@ -1131,6 +1131,38 @@ button:focus-visible {
   background: var(--white);
 }
 
+.ipo-market-switch {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: fit-content;
+  padding: 6px;
+  border: 1px solid rgba(216, 214, 223, 0.78);
+  border-radius: 6px;
+  background: var(--white);
+}
+
+.ipo-market-switch button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--slate);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.ipo-market-switch button.active {
+  border-color: rgba(83, 58, 253, 0.28);
+  background: rgba(83, 58, 253, 0.08);
+  color: var(--violet);
+}
+
 .ipo-filter-bar {
   display: flex;
   flex-wrap: wrap;
@@ -1176,6 +1208,40 @@ button:focus-visible {
 
 .ipo-filter-bar strong {
   color: inherit;
+  font-weight: 400;
+}
+
+.a-share-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.a-share-board-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.a-share-board-row {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(216, 214, 223, 0.72);
+  border-radius: 4px;
+  background: var(--porcelain);
+}
+
+.a-share-board-row span {
+  color: var(--slate);
+  font-size: 11px;
+}
+
+.a-share-board-row strong {
+  color: var(--ink);
+  font-size: 18px;
   font-weight: 400;
 }
 
@@ -1382,6 +1448,107 @@ button:focus-visible {
   color: var(--ink);
   font-size: 13px;
   line-height: 1.38;
+}
+
+.a-share-table {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid rgba(216, 214, 223, 0.76);
+  border-radius: 6px;
+}
+
+.a-share-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(118px, 1.1fr) minmax(88px, 0.75fr) 88px minmax(112px, 1fr) minmax(96px, 0.85fr) minmax(110px, 1fr) minmax(120px, 1fr) 34px;
+  gap: 10px;
+  align-items: center;
+  min-height: 58px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(229, 237, 245, 0.92);
+  background: var(--white);
+}
+
+.a-share-row:nth-child(even) {
+  background: var(--porcelain);
+}
+
+.a-share-row:last-child {
+  border-bottom: 0;
+}
+
+.a-share-row.header {
+  min-height: 40px;
+  background: var(--powder);
+  color: var(--slate);
+  font-size: 12px;
+}
+
+.a-share-row > span {
+  min-width: 0;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.38;
+}
+
+.a-share-row-link {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid rgba(216, 214, 223, 0.78);
+  border-radius: 4px;
+  background: var(--white);
+  color: var(--slate);
+  text-decoration: none;
+}
+
+.a-share-row-link:hover {
+  border-color: rgba(83, 58, 253, 0.28);
+  color: var(--violet);
+}
+
+.a-share-observation-list {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid rgba(216, 214, 223, 0.76);
+  border-radius: 6px;
+}
+
+.a-share-observation-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px 88px;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px;
+  border-bottom: 1px solid rgba(229, 237, 245, 0.92);
+  background: var(--white);
+}
+
+.a-share-observation-row:nth-child(even) {
+  background: var(--porcelain);
+}
+
+.a-share-observation-row:last-child {
+  border-bottom: 0;
+}
+
+.a-share-observation-row strong {
+  color: var(--ink);
+  font-weight: 400;
+  text-align: right;
+}
+
+.a-share-observation-row span,
+.a-share-observation-row em {
+  color: var(--slate);
+  font-size: 13px;
+  font-style: normal;
+}
+
+.a-share-observation-row em {
+  justify-self: end;
 }
 
 .ipo-timeline-panel {
@@ -1986,6 +2153,9 @@ button:focus-visible {
   .timeline-row,
   .ipo-calendar-row,
   .ipo-calendar-row.header,
+  .a-share-row,
+  .a-share-row.header,
+  .a-share-observation-row,
   .ipo-event-row {
     grid-template-columns: 1fr;
   }
@@ -1999,6 +2169,8 @@ button:focus-visible {
   .ipo-pulse-metrics,
   .ipo-allocation-grid,
   .ipo-allocation-grid.expanded,
+  .a-share-summary,
+  .a-share-board-list,
   .lot-slider,
   .source-row {
     grid-template-columns: 1fr;
@@ -2039,9 +2211,15 @@ button:focus-visible {
   .command-metrics,
   .kpi-meta,
   .mini-metrics,
+  .ipo-market-switch,
   .module-card-grid,
   .module-card-grid.compact {
+    width: 100%;
     grid-template-columns: 1fr;
+  }
+
+  .ipo-market-switch button {
+    flex: 1 1 140px;
   }
 
   .kpi-card {

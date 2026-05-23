@@ -24,3 +24,4 @@ crons = ["0 2 16,18,21 * *"]
 [vars]
 HISTORY_MONTHS = "1"
 SCRAPE_DELAY_MS = "250"
+# Set IPOSEEK_COOKIE or IPOSEEK_ACCESS_TOKEN as a secret/local var before enabling A-share IPO data.

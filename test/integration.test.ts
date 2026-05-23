@@ -2,7 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 import { fetchKitaTotalMonthly } from "../src/worker/scrapers/kita";
 import { fetchNaverMonthlyRows } from "../src/worker/scrapers/naver";
 import { fetchMonthlyExchangeRateRows } from "../src/worker/scrapers/exchange-rate";
-import { FRANKFURTER_EXCHANGE_RATE_JSON, KITA_ITEM_AMT_XML, KITA_ITEM_WGT_XML, NAVER_HTML } from "./fixtures";
+import { fetchIpoSeekNewStock } from "../src/worker/scrapers/iposeek";
+import {
+  FRANKFURTER_EXCHANGE_RATE_JSON,
+  IPOSEEK_BOARD_COUNTS_JSON,
+  IPOSEEK_NEW_STOCK_JSON,
+  IPOSEEK_STATUS_COUNTS_JSON,
+  KITA_ITEM_AMT_XML,
+  KITA_ITEM_WGT_XML,
+  NAVER_HTML
+} from "./fixtures";
 
 describe("scraper integrations with mocked HTTP", () => {
   it("fetches K-stat amount and weight templates successfully", async () => {
@@ -50,5 +59,39 @@ describe("scraper integrations with mocked HTTP", () => {
 
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(rows.at(-1)).toMatchObject({ month: "2026-03", rateDate: "2026-03-31", usdCny: 6.8628, cnyKrw: 217.09, source: "Frankfurter" });
+  });
+
+  it("fetches IpoSeek A-share issuance rows with bearer auth", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(IPOSEEK_NEW_STOCK_JSON, { status: 200 }))
+      .mockResolvedValueOnce(new Response(IPOSEEK_BOARD_COUNTS_JSON, { status: 200 }))
+      .mockResolvedValueOnce(new Response(IPOSEEK_STATUS_COUNTS_JSON, { status: 200 }));
+
+    const tracker = await fetchIpoSeekNewStock({ accessToken: "test-token" }, fetcher as unknown as typeof fetch);
+
+    expect(fetcher).toHaveBeenCalledTimes(3);
+    expect(tracker.total).toBe(1644);
+    expect(tracker.statusCounts["启动发行"]).toBe(2);
+    expect(tracker.items[0]).toMatchObject({
+      shareCode: "301669",
+      shareName: "高特电子",
+      issuanceStatus: "发行中"
+    });
+  });
+
+  it("refreshes IpoSeek access token when a refresh cookie is available", async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: "fresh-token", expires_in: 3600 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(IPOSEEK_NEW_STOCK_JSON, { status: 200 }))
+      .mockResolvedValueOnce(new Response(IPOSEEK_BOARD_COUNTS_JSON, { status: 200 }))
+      .mockResolvedValueOnce(new Response(IPOSEEK_STATUS_COUNTS_JSON, { status: 200 }));
+
+    await fetchIpoSeekNewStock({ cookie: "refresh_token=test-refresh; access_token=stale-token" }, fetcher as unknown as typeof fetch);
+
+    const listCall = fetcher.mock.calls[1];
+    const init = listCall[1] as RequestInit;
+    expect((init.headers as Record<string, string>).authorization).toBe("Bearer fresh-token");
   });
 });

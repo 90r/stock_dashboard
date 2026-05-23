@@ -55,7 +55,16 @@ import {
 } from "recharts";
 import type { TickItem } from "recharts/types/util/types";
 import type { CategoryId } from "../shared/catalog";
-import type { ApiError, CategorySnapshot, IpoCalendarItem, IpoMarginRecord, IpoTrackerResponse, SnapshotResponse } from "../shared/types";
+import type {
+  AShareIpoIssuanceItem,
+  AShareIpoResponse,
+  ApiError,
+  CategorySnapshot,
+  IpoCalendarItem,
+  IpoMarginRecord,
+  IpoTrackerResponse,
+  SnapshotResponse
+} from "../shared/types";
 
 type LoadState =
   | { status: "loading"; data: null; error: null }
@@ -68,6 +77,7 @@ type IpoLoadState =
   | { status: "error"; data: null; error: string };
 type IpoStage = { label: string; tone: "live" | "design" | "queued" | "done" };
 type IpoFilter = "all" | "open" | "upcoming" | "listed";
+type IpoMarket = "hk" | "aShare";
 
 type ModuleId = "home" | "memory" | "ipo" | "watchlist";
 type MainView = "dashboard" | "usage" | "financials" | "transmission" | "earnings";
@@ -123,8 +133,8 @@ const moduleDefinitions: ModuleDefinition[] = [
     path: "/ipo",
     label: "IPO 监控",
     shortLabel: "IPO",
-    eyebrow: "Live HK",
-    description: "港股新股日历、孖展脉搏、超额认购与上市节奏。",
+    eyebrow: "Live IPO",
+    description: "港股新股日历、A 股发行动态、募资费用与上市节奏。",
     icon: Briefcase,
     status: "Live"
   },
@@ -519,6 +529,7 @@ function MemoryModuleHeader() {
 }
 
 function IpoMonitorPage({ state }: { state: IpoLoadState }) {
+  const [activeMarket, setActiveMarket] = useState<IpoMarket>("hk");
   const [activeFilter, setActiveFilter] = useState<IpoFilter>("all");
   const [expandedMarginSymbols, setExpandedMarginSymbols] = useState<Set<string>>(() => new Set());
   const [copiedSymbol, setCopiedSymbol] = useState<string | null>(null);
@@ -544,6 +555,7 @@ function IpoMonitorPage({ state }: { state: IpoLoadState }) {
   }
 
   const tracker = state.data;
+  const aShare = tracker.aShare;
   const today = getIpoReferenceDate(tracker);
   const marginBySymbol = new Map(tracker.margin.records.map((record) => [record.symbol, record]));
   const sortedIpos = [...tracker.ipos].sort((a, b) =>
@@ -589,53 +601,143 @@ function IpoMonitorPage({ state }: { state: IpoLoadState }) {
     <div className="page-stack">
       <section className="command-panel ipo-hero" aria-label="ipo monitor">
         <div className="command-copy">
-          <p className="eyebrow">HK IPO live radar</p>
-          <h2>港股 IPO 监控雷达</h2>
-          <p>同步 TradeSmart 的港股新股日历与孖展脉搏，把招股、定价、中签、上市和超购热度放进同一个页面。</p>
+          <p className="eyebrow">IPO market radar</p>
+          <h2>IPO 监控雷达</h2>
+          <p>港股新股日历与 A 股发行动态放在同一个 IPO 工作台里，先按市场切换，再看日历、募资、费用和上市节奏。</p>
         </div>
         <div className="command-metrics" aria-label="ipo summary">
           <Metric label="新股条目" value={String(tracker.count)} />
           <Metric label="招股中" value={String(openCount)} />
-          <Metric label="待上市" value={String(pendingListingCount)} />
-          <Metric label="最高超购" value={formatRatio(topMargin?.oversubscriptionRatio)} />
+          <Metric label="A股发行动态" value={formatCount(aShare?.total)} />
+          <Metric label="A股发行中" value={formatCount(getAShareStatusCount(aShare, "启动发行") + getAShareStatusCount(aShare, "发行中"))} />
         </div>
       </section>
 
-      <section className="flow-strip" aria-label="ipo cash flow">
-        <strong>资金流</strong>
-        <span>招股截止</span>
-        <ArrowRight size={14} />
-        <span>资金冻结</span>
-        <ArrowRight size={14} />
-        <span>公布中签前一天下午回笼未中签资金</span>
-        <ArrowRight size={14} />
-        <span>暗盘</span>
-        <ArrowRight size={14} />
-        <span>09:00 正式挂牌</span>
+      <section className="ipo-market-switch" aria-label="ipo market switch">
+        <button type="button" className={activeMarket === "hk" ? "active" : ""} onClick={() => setActiveMarket("hk")}>
+          <Landmark size={15} />
+          港股 IPO
+        </button>
+        <button type="button" className={activeMarket === "aShare" ? "active" : ""} onClick={() => setActiveMarket("aShare")}>
+          <Building2 size={15} />
+          A股发行动态
+        </button>
       </section>
 
-      <section className="workspace">
-        <div className="panel feature-panel">
-          <div className="panel-head compact">
-            <div>
-              <p className="eyebrow">Margin pulse</p>
-              <h2>孖展实时脉搏</h2>
+      {activeMarket === "aShare" ? (
+        <AShareIpoPanel aShare={aShare} />
+      ) : (
+        <>
+          <section className="flow-strip" aria-label="ipo cash flow">
+            <strong>资金流</strong>
+            <span>招股截止</span>
+            <ArrowRight size={14} />
+            <span>资金冻结</span>
+            <ArrowRight size={14} />
+            <span>公布中签前一天下午回笼未中签资金</span>
+            <ArrowRight size={14} />
+            <span>暗盘</span>
+            <ArrowRight size={14} />
+            <span>09:00 正式挂牌</span>
+          </section>
+
+          <section className="workspace">
+            <div className="panel feature-panel">
+              <div className="panel-head compact">
+                <div>
+                  <p className="eyebrow">Margin pulse</p>
+                  <h2>孖展实时脉搏</h2>
+                </div>
+                <Radio size={20} />
+              </div>
+              {marginRecords.length === 0 ? (
+                <div className="empty-state">暂无孖展公开数据</div>
+              ) : (
+                <div className="ipo-pulse-list">
+                  {marginRecords.map((record) => (
+                    <IpoPulseCard
+                      key={record.symbol}
+                      record={record}
+                      ipo={tracker.ipos.find((ipo) => ipo.symbol === record.symbol)}
+                      expanded={expandedMarginSymbols.has(record.symbol)}
+                      copied={copiedSymbol === record.symbol}
+                      onToggleDetails={() => toggleMarginDetails(record.symbol)}
+                      onShare={(ipo) => shareIpo(ipo, record)}
+                      onOpenCalculator={(symbol) => {
+                        setCalculatorSymbol(symbol);
+                        setCalculatorLots(1);
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-            <Radio size={20} />
-          </div>
-          {marginRecords.length === 0 ? (
-            <div className="empty-state">暂无孖展公开数据</div>
-          ) : (
-            <div className="ipo-pulse-list">
-              {marginRecords.map((record) => (
-                <IpoPulseCard
-                  key={record.symbol}
-                  record={record}
-                  ipo={tracker.ipos.find((ipo) => ipo.symbol === record.symbol)}
-                  expanded={expandedMarginSymbols.has(record.symbol)}
-                  copied={copiedSymbol === record.symbol}
-                  onToggleDetails={() => toggleMarginDetails(record.symbol)}
-                  onShare={(ipo) => shareIpo(ipo, record)}
+
+            <div className="panel source-panel">
+              <div className="panel-head compact">
+                <div>
+                  <p className="eyebrow">Source status</p>
+                  <h2>来源与更新</h2>
+                </div>
+                <Landmark size={20} />
+              </div>
+              <div className="source-list">
+                <SourceRow label="页面同步" value={formatHongKongDateTime(tracker.generatedAt)} />
+                <SourceRow label="日历来源" value={tracker.source} href={tracker.sourceUrl} />
+                <SourceRow label="孖展来源" value={tracker.margin.source} href={tracker.margin.sourceUrl} />
+                <SourceRow label="时间窗口" value={`${formatDateOnly(tracker.grid.startDate)} - ${formatDateOnly(tracker.grid.endDate)}`} />
+              </div>
+              <div className="path-list compact-flow">
+                <span>招股截止</span>
+                <span>资金冻结</span>
+                <span>公布中签</span>
+                <span>暗盘观察</span>
+                <span>正式挂牌</span>
+              </div>
+            </div>
+          </section>
+
+          <section className="ipo-filter-bar" aria-label="ipo filters">
+            <Filter size={16} />
+            <button type="button" className={activeFilter === "all" ? "active" : ""} onClick={() => setActiveFilter("all")}>
+              全部 <strong>{sortedIpos.length}</strong>
+            </button>
+            <button type="button" className={activeFilter === "open" ? "active" : ""} onClick={() => setActiveFilter("open")}>
+              招股中 <strong>{openCount}</strong>
+            </button>
+            <button type="button" className={activeFilter === "upcoming" ? "active" : ""} onClick={() => setActiveFilter("upcoming")}>
+              即将上市 <strong>{pendingListingCount}</strong>
+            </button>
+            <button type="button" className={activeFilter === "listed" ? "active" : ""} onClick={() => setActiveFilter("listed")}>
+              最新挂牌 <strong>{listedCount}</strong>
+            </button>
+          </section>
+
+          <IpoTimelinePanel ipos={displayIpos} grid={tracker.grid} today={today} />
+
+          <section className="panel">
+            <div className="panel-head compact">
+              <div>
+                <p className="eyebrow">IPO detail cards</p>
+                <h2>新股详情</h2>
+              </div>
+              <CalendarClock size={20} />
+            </div>
+            <div className="ipo-calendar-table">
+              <div className="ipo-calendar-row header">
+                <span>代码 / 名称</span>
+                <span>阶段</span>
+                <span>招股期</span>
+                <span>中签 / 上市</span>
+                <span>价格 / 入场</span>
+                <span>孖展</span>
+              </div>
+              {displayIpos.map((ipo) => (
+                <IpoCalendarRow
+                  key={ipo.symbol}
+                  ipo={ipo}
+                  margin={marginBySymbol.get(ipo.symbol)}
+                  today={today}
                   onOpenCalculator={(symbol) => {
                     setCalculatorSymbol(symbol);
                     setCalculatorLots(1);
@@ -643,7 +745,109 @@ function IpoMonitorPage({ state }: { state: IpoLoadState }) {
                 />
               ))}
             </div>
-          )}
+          </section>
+
+          <section className="info-grid">
+            <IpoCalculatorPanel ipo={selectedCalculatorIpo} margin={selectedCalculatorMargin} lots={calculatorLots} setLots={setCalculatorLots} />
+            <InfoPanel title="热度判定" eyebrow="watch rules">
+              <div className="signal-list">
+                <Signal label="超购 1000x 以上" point={marginRecords.filter((record) => (record.oversubscriptionRatio ?? 0) >= 1000).length * 100} />
+                <Signal label="孖展 1000 亿以上" point={marginRecords.filter((record) => (record.marginTotalHkdYi ?? 0) >= 1000).length * 100} />
+                <Signal label="未来一周上市" point={pendingListingCount * 100} />
+              </div>
+              <p className="panel-note">孖展和超购是热度信号，不等于投资建议；实际申购仍要核对招股书、券商费率和资金占用。</p>
+            </InfoPanel>
+          </section>
+
+          <section className="info-grid">
+            <InfoPanel title="从日历到中签" eyebrow="calculator workflow">
+              <p>先在这里筛 IPO 和观察资金日历，再用内置模拟器估算不同手数的冻结金额与近似概率。申购前再核对招股书、券商融资比例和手续费。</p>
+              <div className="path-list">
+                <span>挑选正在招股或即将上市的标的</span>
+                <span>查看孖展总额和超额认购热度</span>
+                <span>用手数模拟器估算资金占用和中签概率</span>
+              </div>
+            </InfoPanel>
+            <InfoPanel title="延伸阅读与 FAQ" eyebrow="reference">
+              <IpoFaq />
+            </InfoPanel>
+          </section>
+
+          <footer className="footnote">
+            <p>
+              IPO 数据由本站 Worker 采集 TradeSmart 页面中的结构化数据；日历源标注为 AAStocks，孖展源标注为 AiPO。原始页面：
+              <a href={tracker.sourcePageUrl} target="_blank" rel="noreferrer">
+                TradeSmart IPO Tracker
+              </a>
+              。
+            </p>
+          </footer>
+        </>
+      )}
+    </div>
+  );
+}
+
+function IpoHeroSkeleton({ status = "读取中" }: { status?: string }) {
+  return (
+    <section className="command-panel ipo-hero" aria-label="ipo monitor">
+      <div className="command-copy">
+        <p className="eyebrow">IPO market radar</p>
+        <h2>IPO 监控雷达</h2>
+        <p>正在同步港股新股日历和 A 股发行动态。</p>
+      </div>
+      <div className="command-metrics" aria-label="ipo summary">
+        <Metric label="数据源" value="TradeSmart" />
+        <Metric label="A股" value="投行之声" />
+        <Metric label="日历" value="AAStocks" />
+        <Metric label="接口状态" value={status} />
+      </div>
+    </section>
+  );
+}
+
+function AShareIpoPanel({ aShare }: { aShare?: AShareIpoResponse | null }) {
+  const rows = aShare?.items ?? [];
+  const latestRows = rows.slice(0, 8);
+  const inProgress = getAShareStatusCount(aShare, "启动发行") + getAShareStatusCount(aShare, "发行中");
+  const success = getAShareStatusCount(aShare, "发行成功");
+  const failed = getAShareStatusCount(aShare, "发行失败");
+  const totalProceeds = sumWanAmount(rows.map((row) => row.totalProceeds));
+  const totalCosts = sumWanAmount(rows.map((row) => row.issuanceCosts));
+  const latest = rows[0];
+
+  return (
+    <>
+      {aShare?.error && (
+        <div className="banner" role="status">
+          <AlertTriangle size={18} />
+          <span>A股发行动态暂未取到实时数据：{aShare.error}</span>
+        </div>
+      )}
+
+      <section className="workspace">
+        <div className="panel feature-panel">
+          <div className="panel-head compact">
+            <div>
+              <p className="eyebrow">A-share issuance</p>
+              <h2>A股发行动态</h2>
+            </div>
+            <Building2 size={20} />
+          </div>
+          <div className="a-share-summary">
+            <Metric label="发行动态总数" value={formatCount(aShare?.total)} />
+            <Metric label="发行中" value={formatCount(inProgress)} />
+            <Metric label="发行成功" value={formatCount(success)} />
+            <Metric label="发行失败" value={formatCount(failed)} />
+          </div>
+          <div className="a-share-board-list" aria-label="board counts">
+            {Object.entries(aShare?.boardCounts ?? {}).map(([board, count]) => (
+              <div className="a-share-board-row" key={board}>
+                <span>{board}</span>
+                <strong>{count.toLocaleString("zh-CN")}</strong>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="panel source-panel">
@@ -655,125 +859,135 @@ function IpoMonitorPage({ state }: { state: IpoLoadState }) {
             <Landmark size={20} />
           </div>
           <div className="source-list">
-            <SourceRow label="页面同步" value={formatHongKongDateTime(tracker.generatedAt)} />
-            <SourceRow label="日历来源" value={tracker.source} href={tracker.sourceUrl} />
-            <SourceRow label="孖展来源" value={tracker.margin.source} href={tracker.margin.sourceUrl} />
-            <SourceRow label="时间窗口" value={`${formatDateOnly(tracker.grid.startDate)} - ${formatDateOnly(tracker.grid.endDate)}`} />
+            <SourceRow label="页面同步" value={formatShanghaiDateTime(aShare?.generatedAt)} />
+            <SourceRow label="数据来源" value={aShare?.source ?? "投行之声"} href={aShare?.sourcePageUrl ?? "https://www.iposeek.com/ipo-review/new-stock"} />
+            <SourceRow label="当前筛选" value={`${aShare?.filters.board ?? "全部"} / ${aShare?.filters.issuanceStatus ?? "全部"}`} />
+            <SourceRow label="排序字段" value={`${aShare?.filters.sort ?? "issuanceStartDate"} ${aShare?.filters.order ?? "desc"}`} />
           </div>
-          <div className="path-list compact-flow">
-            <span>招股截止</span>
-            <span>资金冻结</span>
-            <span>公布中签</span>
-            <span>暗盘观察</span>
-            <span>正式挂牌</span>
+          <div className="mini-metrics">
+            <Metric label="本页募资合计" value={formatWanAmount(totalProceeds)} />
+            <Metric label="本页费用合计" value={formatWanAmount(totalCosts)} />
+            <Metric label="最新启动" value={formatDateOnly(latest?.issuanceStartDate)} />
           </div>
         </div>
       </section>
 
-      <section className="ipo-filter-bar" aria-label="ipo filters">
-        <Filter size={16} />
-        <button type="button" className={activeFilter === "all" ? "active" : ""} onClick={() => setActiveFilter("all")}>
-          全部 <strong>{sortedIpos.length}</strong>
-        </button>
-        <button type="button" className={activeFilter === "open" ? "active" : ""} onClick={() => setActiveFilter("open")}>
-          招股中 <strong>{openCount}</strong>
-        </button>
-        <button type="button" className={activeFilter === "upcoming" ? "active" : ""} onClick={() => setActiveFilter("upcoming")}>
-          即将上市 <strong>{pendingListingCount}</strong>
-        </button>
-        <button type="button" className={activeFilter === "listed" ? "active" : ""} onClick={() => setActiveFilter("listed")}>
-          最新挂牌 <strong>{listedCount}</strong>
-        </button>
+      <section className="flow-strip" aria-label="a share issuance flow">
+        <strong>A股发行链路</strong>
+        <span>启动发行</span>
+        <ArrowRight size={14} />
+        <span>询价 / 定价</span>
+        <ArrowRight size={14} />
+        <span>募资与费用确认</span>
+        <ArrowRight size={14} />
+        <span>上市</span>
       </section>
-
-      <IpoTimelinePanel ipos={displayIpos} grid={tracker.grid} today={today} />
 
       <section className="panel">
         <div className="panel-head compact">
           <div>
-            <p className="eyebrow">IPO detail cards</p>
-            <h2>新股详情</h2>
+            <p className="eyebrow">new stock issuance</p>
+            <h2>发行动态明细</h2>
           </div>
           <CalendarClock size={20} />
         </div>
-        <div className="ipo-calendar-table">
-          <div className="ipo-calendar-row header">
-            <span>代码 / 名称</span>
-            <span>阶段</span>
-            <span>招股期</span>
-            <span>中签 / 上市</span>
-            <span>价格 / 入场</span>
-            <span>孖展</span>
+        {latestRows.length === 0 ? (
+          <div className="empty-state">暂无 A 股发行动态数据</div>
+        ) : (
+          <div className="a-share-table">
+            <div className="a-share-row header">
+              <span>代码 / 简称</span>
+              <span>板块</span>
+              <span>状态</span>
+              <span>启动 / 上市</span>
+              <span>发行价 / PE</span>
+              <span>募资 / 费用</span>
+              <span>中介费用</span>
+            </div>
+            {latestRows.map((row) => (
+              <AShareIpoRow key={`${row.id ?? row.shareCode}-${row.sequenceNo ?? row.shareCode}`} row={row} />
+            ))}
           </div>
-          {displayIpos.map((ipo) => (
-            <IpoCalendarRow
-              key={ipo.symbol}
-              ipo={ipo}
-              margin={marginBySymbol.get(ipo.symbol)}
-              today={today}
-              onOpenCalculator={(symbol) => {
-                setCalculatorSymbol(symbol);
-                setCalculatorLots(1);
-              }}
-            />
-          ))}
-        </div>
+        )}
       </section>
 
       <section className="info-grid">
-        <IpoCalculatorPanel ipo={selectedCalculatorIpo} margin={selectedCalculatorMargin} lots={calculatorLots} setLots={setCalculatorLots} />
-        <InfoPanel title="热度判定" eyebrow="watch rules">
-          <div className="signal-list">
-            <Signal label="超购 1000x 以上" point={marginRecords.filter((record) => (record.oversubscriptionRatio ?? 0) >= 1000).length * 100} />
-            <Signal label="孖展 1000 亿以上" point={marginRecords.filter((record) => (record.marginTotalHkdYi ?? 0) >= 1000).length * 100} />
-            <Signal label="未来一周上市" point={pendingListingCount * 100} />
+        <InfoPanel title="费用观察" eyebrow="fee mix">
+          <div className="a-share-observation-list">
+            <AShareObservationRow label="发行费用率最高" value={formatPercentPoint(maxPctTextValue(rows.map((row) => row.issuanceCostsRatio)))} meta="本页样本" />
+            <AShareObservationRow label="承销保荐费率最高" value={formatPercentPoint(maxPctTextValue(rows.map((row) => row.sponsorshipFeeRatio)))} meta="本页样本" />
+            <AShareObservationRow label="平均审核天数" value={formatDays(averageNumber(rows.map((row) => row.auditDays)))} meta="本页样本" />
           </div>
-          <p className="panel-note">孖展和超购是热度信号，不等于投资建议；实际申购仍要核对招股书、券商费率和资金占用。</p>
+          <p className="panel-note">金额单位沿用投行之声口径：募资总额、发行费用等字段为万元。</p>
         </InfoPanel>
-      </section>
-
-      <section className="info-grid">
-        <InfoPanel title="从日历到中签" eyebrow="calculator workflow">
-          <p>先在这里筛 IPO 和观察资金日历，再用内置模拟器估算不同手数的冻结金额与近似概率。申购前再核对招股书、券商融资比例和手续费。</p>
+        <InfoPanel title="和港股放一起的逻辑" eyebrow="market desk">
           <div className="path-list">
-            <span>挑选正在招股或即将上市的标的</span>
-            <span>查看孖展总额和超额认购热度</span>
-            <span>用手数模拟器估算资金占用和中签概率</span>
+            <span>同属 IPO 监控：一个看港股申购与孖展，一个看 A 股发行与费用</span>
+            <span>同用发行/上市时间轴，方便比较市场节奏和资金占用</span>
+            <span>后续可以继续并入递表、审核、过会和注册批文状态</span>
           </div>
-        </InfoPanel>
-        <InfoPanel title="延伸阅读与 FAQ" eyebrow="reference">
-          <IpoFaq />
         </InfoPanel>
       </section>
 
       <footer className="footnote">
         <p>
-          IPO 数据由本站 Worker 采集 TradeSmart 页面中的结构化数据；日历源标注为 AAStocks，孖展源标注为 AiPO。原始页面：
-          <a href={tracker.sourcePageUrl} target="_blank" rel="noreferrer">
-            TradeSmart IPO Tracker
+          A股发行动态由本站 Worker 采集投行之声“首发上市动态”接口。原始页面：
+          <a href={aShare?.sourcePageUrl ?? "https://www.iposeek.com/ipo-review/new-stock"} target="_blank" rel="noreferrer">
+            投行之声发行动态
           </a>
           。
         </p>
       </footer>
+    </>
+  );
+}
+
+function AShareObservationRow({ label, value, meta }: { label: string; value: string; meta: string }) {
+  return (
+    <div className="a-share-observation-row">
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <em>{meta}</em>
     </div>
   );
 }
 
-function IpoHeroSkeleton({ status = "读取中" }: { status?: string }) {
+function AShareIpoRow({ row }: { row: AShareIpoIssuanceItem }) {
   return (
-    <section className="command-panel ipo-hero" aria-label="ipo monitor">
-      <div className="command-copy">
-        <p className="eyebrow">HK IPO live radar</p>
-        <h2>港股 IPO 监控雷达</h2>
-        <p>正在同步港股新股日历、孖展总额、超额认购和上市节奏。</p>
-      </div>
-      <div className="command-metrics" aria-label="ipo summary">
-        <Metric label="数据源" value="TradeSmart" />
-        <Metric label="日历" value="AAStocks" />
-        <Metric label="孖展" value="AiPO" />
-        <Metric label="接口状态" value={status} />
-      </div>
-    </section>
+    <div className="a-share-row">
+      <span className="ipo-name-cell">
+        <strong>{row.shareCode || "--"}</strong>
+        <em>{row.shareName || row.companyChineseName || "--"}</em>
+      </span>
+      <span className="ipo-date-stack">
+        <em>{row.place || "--"}</em>
+        <strong>{row.board || "--"}</strong>
+      </span>
+      <span>
+        <IpoStageBadge stage={getAShareStage(row.issuanceStatus)} />
+      </span>
+      <span className="ipo-date-stack">
+        <em>启动 {formatDateOnly(row.issuanceStartDate)}</em>
+        <em>上市 {formatDateOnly(row.listDate)}</em>
+      </span>
+      <span className="ipo-date-stack">
+        <em>{row.issuancePrice ? `¥${row.issuancePrice}` : "--"}</em>
+        <em>PE {row.peRatio ?? "--"}</em>
+      </span>
+      <span className="ipo-date-stack">
+        <em>{formatWanText(row.totalProceeds)}</em>
+        <em>费用 {formatWanText(row.issuanceCosts)}</em>
+      </span>
+      <span className="ipo-date-stack">
+        <em>承销 {formatWanText(row.sponsorshipFee)}</em>
+        <em>律所 {formatWanText(row.lawyerFee)}</em>
+      </span>
+      {row.detailUrl && (
+        <a className="a-share-row-link" href={row.detailUrl} target="_blank" rel="noreferrer" title="打开原始详情">
+          <ExternalLink size={14} />
+        </a>
+      )}
+    </div>
   );
 }
 
@@ -1959,11 +2173,113 @@ function formatHongKongDateTime(value: string | null | undefined): string {
   }).format(date);
 }
 
+function formatShanghaiDateTime(value: string | null | undefined): string {
+  if (!value) {
+    return "--";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Shanghai",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(date);
+}
+
 function formatEventLabel(code: string, legend: IpoTrackerResponse["eventLegend"]): string {
   return code
     .split(",")
     .map((part) => legend[part]?.zh ?? legend[part]?.en ?? part)
     .join(" / ");
+}
+
+function getAShareStage(status: string): IpoStage {
+  if (status === "发行中" || status === "启动发行") {
+    return { label: "发行中", tone: "live" };
+  }
+  if (status === "发行成功") {
+    return { label: "发行成功", tone: "done" };
+  }
+  if (status === "发行失败") {
+    return { label: "发行失败", tone: "queued" };
+  }
+  return { label: status || "--", tone: "design" };
+}
+
+function getAShareStatusCount(aShare: AShareIpoResponse | null | undefined, status: string): number {
+  return aShare?.statusCounts[status] ?? 0;
+}
+
+function formatCount(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) {
+    return "--";
+  }
+  return value.toLocaleString("zh-CN");
+}
+
+function parseWanText(value: string | null | undefined): number | null {
+  if (!value) {
+    return null;
+  }
+  const numeric = Number(value.replace(/,/g, "").replace(/%$/, ""));
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function sumWanAmount(values: Array<string | null | undefined>): number | null {
+  const numbers = values.map(parseWanText).filter((value): value is number => value != null);
+  if (numbers.length === 0) {
+    return null;
+  }
+  return numbers.reduce((sum, value) => sum + value, 0);
+}
+
+function averageNumber(values: Array<number | null | undefined>): number | null {
+  const numbers = values.filter((value): value is number => value != null && Number.isFinite(value));
+  if (numbers.length === 0) {
+    return null;
+  }
+  return Math.round((numbers.reduce((sum, value) => sum + value, 0) / numbers.length) * 10) / 10;
+}
+
+function maxPctTextValue(values: Array<string | null | undefined>): number | null {
+  const numbers = values.map(parseWanText).filter((value): value is number => value != null);
+  if (numbers.length === 0) {
+    return null;
+  }
+  return Math.max(...numbers);
+}
+
+function formatWanAmount(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) {
+    return "--";
+  }
+  if (value >= 10_000) {
+    return `${(value / 10_000).toLocaleString("zh-CN", { maximumFractionDigits: 1 })} 亿`;
+  }
+  return `${value.toLocaleString("zh-CN", { maximumFractionDigits: 0 })} 万`;
+}
+
+function formatWanText(value: string | null | undefined): string {
+  return formatWanAmount(parseWanText(value));
+}
+
+function formatPercentPoint(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) {
+    return "--";
+  }
+  return `${value.toLocaleString("zh-CN", { maximumFractionDigits: 2 })}%`;
+}
+
+function formatDays(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) {
+    return "--";
+  }
+  return `${value.toLocaleString("zh-CN", { maximumFractionDigits: 1 })} 天`;
 }
 
 function formatNumber(value: number | null | undefined, mode: "usdKg" | "money" = "money"): string {

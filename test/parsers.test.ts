@@ -10,8 +10,10 @@ import {
 } from "../src/worker/scrapers/kita";
 import { parseNaverDailyHtml, selectMonthEndCloses } from "../src/worker/scrapers/naver";
 import { parseTradesmartIpoHtml } from "../src/worker/scrapers/tradesmart-ipo";
+import { parseIpoSeekListJson } from "../src/worker/scrapers/iposeek";
 import {
   FRANKFURTER_EXCHANGE_RATE_JSON,
+  IPOSEEK_NEW_STOCK_JSON,
   KITA_DEST_AMT_XML,
   KITA_DEST_WGT_XML,
   KITA_ITEM_AMT_XML,
@@ -130,6 +132,21 @@ describe("TradeSmart IPO parser", () => {
       marginTotalHkdYi: 4563.21765,
       oversubscriptionRatio: 4146.81,
       brokerTopText: "辉立证券: 401亿"
+    });
+  });
+});
+
+describe("IpoSeek new stock parser", () => {
+  it("extracts A-share issuance rows from the API response", () => {
+    const tracker = parseIpoSeekListJson(IPOSEEK_NEW_STOCK_JSON);
+
+    expect(tracker.total).toBe(1644);
+    expect(tracker.rows).toHaveLength(2);
+    expect(tracker.rows?.[0]).toMatchObject({
+      shareCode: "301669",
+      shareName: "高特电子",
+      issuanceStatus: "启动发行",
+      issuanceStartDate: "2026-05-21"
     });
   });
 });

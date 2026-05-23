@@ -59,3 +59,84 @@ export const FRANKFURTER_EXCHANGE_RATE_JSON = JSON.stringify([
 ]);
 
 export const TRADESMART_IPO_HTML = `<html><body><script>self.__next_f=self.__next_f||[];self.__next_f.push([1,"19:[\\"$\\",\\"$L1a\\",null,{\\"locale\\":\\"zh\\",\\"data\\":{\\"generated_at\\":\\"2026-05-22T16:25:03.821Z\\",\\"generated_at_utc\\":\\"2026-05-22T16:25:03.821Z\\",\\"source\\":\\"AAStocks HK IPO Calendar\\",\\"source_url\\":\\"http://www.aastocks.com/tc/stocks/market/ipo/ipocalendar.aspx\\",\\"timezone\\":\\"Asia/Hong_Kong\\",\\"grid\\":{\\"start_date\\":\\"2026-05-16\\",\\"end_date\\":\\"2026-05-30\\",\\"dates\\":[\\"2026-05-16\\",\\"2026-05-17\\"]},\\"event_legend\\":{\\"O\\":{\\"zh\\":\\"招股开始\\"}},\\"ipos\\":[{\\"symbol\\":\\"03310\\",\\"symbol_hk\\":\\"03310.HK\\",\\"name\\":\\"雲英谷科技\\",\\"subscription_open\\":\\"2026-05-18\\",\\"subscription_close\\":\\"2026-05-21\\",\\"price_fixed_date\\":\\"2026-05-18\\",\\"allotment_date\\":\\"2026-05-26\\",\\"listing_date\\":\\"2026-05-27\\",\\"listing_label\\":\\"4日後上市\\",\\"events\\":[{\\"date\\":\\"2026-05-18\\",\\"code\\":\\"O,F\\",\\"label\\":\\"O,F\\"}],\\"aastocks_url\\":\\"http://www.aastocks.com/tc/stocks/market/ipo/upcomingipo/company-summary?symbol=03310\\",\\"offer_price_hkd\\":20.81,\\"offer_price_range\\":null,\\"lot_size\\":200,\\"entry_fee_hkd\\":4203.98}],\\"count\\":1,\\"margin\\":{\\"generated_at\\":\\"2026-05-22T16:24:58.634Z\\",\\"source\\":\\"AiPO (myiqdii.com)\\",\\"source_url\\":\\"https://aipo.myiqdii.com/trasaction/index\\",\\"count\\":1,\\"records\\":[{\\"symbol\\":\\"03310\\",\\"symbol_hk\\":\\"03310.HK\\",\\"name\\":\\"云英谷科技\\",\\"margin_total_hkd_yi\\":4563.21765,\\"oversubscription_ratio\\":4146.81,\\"broker_top_text\\":\\"辉立证券: 401亿\\",\\"observed_at\\":\\"2026-05-21T03:48:15.000Z\\",\\"scraped_at\\":\\"2026-05-21T04:05:39.469Z\\",\\"source_url\\":\\"https://aipo.myiqdii.com/Trasaction/MarginDetails?symbol=03310\\"}]}}}]"])</script></body></html>`;
+
+export const IPOSEEK_NEW_STOCK_JSON = JSON.stringify({
+  rows: [
+    {
+      sequenceNo: 1,
+      id: 108393,
+      projectId: 1003995,
+      shareCode: "301669",
+      shareName: "高特电子",
+      place: "深交所",
+      board: "创业板",
+      companyChineseName: "杭州高特电子设备股份有限公司",
+      issuanceStartDate: "2026-05-21",
+      pricingMechanism: "询价发行",
+      issuanceStatus: "启动发行",
+      listDate: null,
+      issuancePrice: "-",
+      issuanceNumber: "-",
+      strategicPlacementNumber: "-",
+      peRatio: "-",
+      totalProceeds: "-",
+      issuanceCosts: "-",
+      sponsorshipFee: "-",
+      auditFee: "-",
+      lawyerFee: "-",
+      disclosureFee: "-",
+      processingFee: "-",
+      auditDays: 226,
+      registrationValidDate: "2026-02-04",
+      issuanceCostsRatio: "-",
+      sponsorshipFeeRatio: "-",
+      auditFeeRatio: "-",
+      lawyerFeeRatio: "-",
+      disclosureFeeRatio: "-",
+      processingFeeRatio: "-",
+      sponsor: null,
+      accountingFirm: null,
+      lawFirm: null
+    },
+    {
+      sequenceNo: 2,
+      id: 103774,
+      projectId: 1003978,
+      shareCode: "001237",
+      shareName: "惠康科技",
+      place: "深交所",
+      board: "主板",
+      companyChineseName: "宁波惠康工业科技股份有限公司",
+      issuanceStartDate: "2026-04-30",
+      pricingMechanism: "询价发行",
+      issuanceStatus: "发行成功",
+      listDate: "2026-05-22",
+      issuancePrice: "53.26",
+      issuanceNumber: "3,708.79",
+      strategicPlacementNumber: "0.00",
+      peRatio: "21.04",
+      totalProceeds: "197,529.93",
+      issuanceCosts: "16,919.15",
+      sponsorshipFee: "13,018.34",
+      auditFee: "2,225.00",
+      lawyerFee: "1,071.70",
+      disclosureFee: "541.98",
+      processingFee: "62.13",
+      auditDays: 286,
+      registrationValidDate: "2026-03-25",
+      issuanceCostsRatio: "8.57%",
+      sponsorshipFeeRatio: "6.59%",
+      auditFeeRatio: "1.13%",
+      lawyerFeeRatio: "0.54%",
+      disclosureFeeRatio: "0.27%",
+      processingFeeRatio: "0.03%",
+      sponsor: null,
+      accountingFirm: null,
+      lawFirm: null
+    }
+  ],
+  total: 1644
+});
+
+export const IPOSEEK_BOARD_COUNTS_JSON = JSON.stringify({ 北证: 316, 科创板: 612, 主板: 113, 创业板: 600 });
+export const IPOSEEK_STATUS_COUNTS_JSON = JSON.stringify({ 启动发行: 2, 发行失败: 2, 发行成功: 1640 });

@@ -158,6 +158,66 @@ export interface IpoMarginRecord {
   sourceUrl: string | null;
 }
 
+export interface AShareIpoIssuanceItem {
+  id: number | null;
+  projectId: number | null;
+  sequenceNo: number | null;
+  shareCode: string;
+  shareName: string;
+  companyChineseName: string;
+  place: string;
+  board: string;
+  issuanceStatus: string;
+  pricingMechanism: string;
+  issuanceStartDate: string | null;
+  listDate: string | null;
+  issuancePrice: string | null;
+  issuanceNumber: string | null;
+  strategicPlacementNumber: string | null;
+  peRatio: string | null;
+  totalProceeds: string | null;
+  issuanceCosts: string | null;
+  sponsorshipFee: string | null;
+  auditFee: string | null;
+  lawyerFee: string | null;
+  disclosureFee: string | null;
+  processingFee: string | null;
+  auditDays: number | null;
+  registrationValidDate: string | null;
+  issuanceCostsRatio: string | null;
+  sponsorshipFeeRatio: string | null;
+  auditFeeRatio: string | null;
+  lawyerFeeRatio: string | null;
+  disclosureFeeRatio: string | null;
+  processingFeeRatio: string | null;
+  sponsor: string | null;
+  accountingFirm: string | null;
+  lawFirm: string | null;
+  detailUrl: string | null;
+}
+
+export interface AShareIpoResponse {
+  generatedAt: string;
+  source: string;
+  sourceUrl: string;
+  sourcePageUrl: string;
+  timezone: string;
+  page: number;
+  size: number;
+  total: number;
+  count: number;
+  items: AShareIpoIssuanceItem[];
+  filters: {
+    board: string;
+    issuanceStatus: string;
+    sort: string;
+    order: string;
+  };
+  boardCounts: Record<string, number>;
+  statusCounts: Record<string, number>;
+  error: string | null;
+}
+
 export interface IpoTrackerResponse {
   generatedAt: string;
   generatedAtUtc: string | null;
@@ -180,4 +240,5 @@ export interface IpoTrackerResponse {
     count: number;
     records: IpoMarginRecord[];
   };
+  aShare?: AShareIpoResponse | null;
 }

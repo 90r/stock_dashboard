@@ -3,6 +3,7 @@ import { buildSnapshot } from "./worker/snapshot";
 import type { Env } from "./worker/env";
 import { refreshSnapshot } from "./worker/refresh";
 import { fetchTradesmartIpoTracker } from "./worker/scrapers/tradesmart-ipo";
+import { emptyIpoSeekNewStock, fetchIpoSeekNewStock } from "./worker/scrapers/iposeek";
 
 const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
@@ -27,7 +28,8 @@ export default {
 
     if (url.pathname === "/api/ipo" && request.method === "GET") {
       try {
-        return json(await fetchTradesmartIpoTracker());
+        const aShare = await fetchIpoSeekWithFallback(env);
+        return json(await fetchTradesmartIpoTracker(fetch, aShare));
       } catch (error) {
         return jsonError("IPO data unavailable", error, 502);
       }
@@ -65,6 +67,22 @@ export default {
     ctx.waitUntil(refreshSnapshot(env, { months: Number(env.HISTORY_MONTHS ?? "1") }));
   }
 };
+
+async function fetchIpoSeekWithFallback(env: Env) {
+  if (!env.IPOSEEK_COOKIE && !env.IPOSEEK_ACCESS_TOKEN) {
+    return emptyIpoSeekNewStock("Missing IPOSEEK_COOKIE or IPOSEEK_ACCESS_TOKEN");
+  }
+
+  try {
+    return await fetchIpoSeekNewStock({
+      cookie: env.IPOSEEK_COOKIE,
+      accessToken: env.IPOSEEK_ACCESS_TOKEN,
+      deviceFingerprint: env.IPOSEEK_DEVICE_FINGERPRINT
+    });
+  } catch (error) {
+    return emptyIpoSeekNewStock(error instanceof Error ? error.message : String(error));
+  }
+}
 
 function isRefreshAuthorized(request: Request, env: Env): boolean {
   if (!env.REFRESH_TOKEN) {
