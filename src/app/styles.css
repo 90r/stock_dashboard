@@ -122,6 +122,21 @@ button:focus-visible {
   line-height: 1.07;
 }
 
+.brand-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.brand-title-row span {
+  color: var(--slate);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
 .eyebrow {
   margin: 0 0 6px;
   color: var(--ghost);
@@ -380,6 +395,14 @@ button:focus-visible {
   background:
     linear-gradient(90deg, rgba(114, 50, 241, 0.11) 3.13%, rgba(251, 118, 250, 0.08) 50%, rgba(129, 184, 26, 0.12)),
     var(--white);
+}
+
+.home-modules .module-card {
+  min-height: 220px;
+}
+
+.monitor-queue-panel {
+  width: 100%;
 }
 
 .ipo-hero {
@@ -977,6 +1000,10 @@ button:focus-visible {
 .timeline-list {
   display: grid;
   gap: 8px;
+}
+
+.timeline-list.wide {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .timeline-row {
@@ -2072,7 +2099,8 @@ button:focus-visible {
   }
 
   .kpi-grid,
-  .info-grid {
+  .info-grid,
+  .timeline-list.wide {
     grid-template-columns: 1fr;
   }
 
