@@ -46,6 +46,40 @@ export interface RefreshLogRow {
   message: string | null;
 }
 
+export async function ensureAppKvSchema(env: Env): Promise<void> {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS app_kv (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`
+  ).run();
+}
+
+export async function getAppKvValue(env: Env, key: string): Promise<string | null> {
+  try {
+    await ensureAppKvSchema(env);
+    const result = await env.DB.prepare(`SELECT value FROM app_kv WHERE key = ?`).bind(key).first<{ value: string }>();
+    return result?.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setAppKvValue(env: Env, key: string, value: string): Promise<void> {
+  try {
+    await ensureAppKvSchema(env);
+    await env.DB.prepare(
+      `INSERT INTO app_kv (key, value, updated_at) VALUES (?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`
+    )
+      .bind(key, value, new Date().toISOString())
+      .run();
+  } catch {
+    // Persisting auth is best-effort; do not break the request if D1 is unavailable.
+  }
+}
+
 export async function ensureExchangeRateSchema(env: Env): Promise<void> {
   await env.DB.prepare(
     `CREATE TABLE IF NOT EXISTS exchange_rate_monthly (

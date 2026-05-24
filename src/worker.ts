@@ -1,9 +1,12 @@
 import type { ApiError } from "./shared/types";
 import { buildSnapshot } from "./worker/snapshot";
+import { getAppKvValue, setAppKvValue } from "./worker/db";
 import type { Env } from "./worker/env";
 import { refreshSnapshot } from "./worker/refresh";
 import { fetchTradesmartIpoTracker } from "./worker/scrapers/tradesmart-ipo";
-import { emptyIpoSeekNewStock, fetchIpoSeekNewStock } from "./worker/scrapers/iposeek";
+import { emptyIpoSeekNewStock, fetchIpoSeekNewStock, type IpoSeekAuth } from "./worker/scrapers/iposeek";
+
+const IPOSEEK_AUTH_KV_KEY = "iposeek_auth";
 
 const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
@@ -36,7 +39,7 @@ export default {
 
     if (url.pathname === "/api/ipo/a-share" && request.method === "GET") {
       try {
-        return json(await fetchIpoSeekWithFallback(env));
+        return json(await fetchIpoSeekWithFallback(env, ctx));
       } catch (error) {
         return jsonError("A-share IPO data unavailable", error, 502);
       }
@@ -75,20 +78,53 @@ export default {
   }
 };
 
-async function fetchIpoSeekWithFallback(env: Env) {
+async function fetchIpoSeekWithFallback(env: Env, ctx: ExecutionContext) {
   if (!env.IPOSEEK_COOKIE && !env.IPOSEEK_ACCESS_TOKEN) {
     return emptyIpoSeekNewStock("Missing IPOSEEK_COOKIE or IPOSEEK_ACCESS_TOKEN");
   }
 
+  const stored = await loadStoredIpoSeekAuth(env);
+  const auth: IpoSeekAuth = {
+    cookie: stored?.cookie ?? env.IPOSEEK_COOKIE,
+    accessToken: stored?.accessToken ?? env.IPOSEEK_ACCESS_TOKEN,
+    deviceFingerprint: stored?.deviceFingerprint ?? env.IPOSEEK_DEVICE_FINGERPRINT
+  };
+
   try {
-    return await fetchIpoSeekNewStock({
-      cookie: env.IPOSEEK_COOKIE,
-      accessToken: env.IPOSEEK_ACCESS_TOKEN,
-      deviceFingerprint: env.IPOSEEK_DEVICE_FINGERPRINT
+    return await fetchIpoSeekNewStock(auth, fetch, (next) => {
+      ctx.waitUntil(persistIpoSeekAuth(env, next));
     });
   } catch (error) {
     return emptyIpoSeekNewStock(error instanceof Error ? error.message : String(error));
   }
+}
+
+async function loadStoredIpoSeekAuth(env: Env): Promise<IpoSeekAuth | null> {
+  const raw = await getAppKvValue(env, IPOSEEK_AUTH_KV_KEY);
+  if (!raw) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(raw) as IpoSeekAuth;
+    if (!parsed || (!parsed.cookie && !parsed.accessToken)) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+async function persistIpoSeekAuth(env: Env, auth: IpoSeekAuth): Promise<void> {
+  await setAppKvValue(
+    env,
+    IPOSEEK_AUTH_KV_KEY,
+    JSON.stringify({
+      cookie: auth.cookie ?? null,
+      accessToken: auth.accessToken ?? null,
+      deviceFingerprint: auth.deviceFingerprint ?? null
+    })
+  );
 }
 
 function isRefreshAuthorized(request: Request, env: Env): boolean {

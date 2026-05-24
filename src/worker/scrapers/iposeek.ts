@@ -1,10 +1,12 @@
 import type { AShareIpoIssuanceItem, AShareIpoResponse } from "../../shared/types";
-import { fetchTextWithRetry, type Fetcher } from "./http";
+import { delay, type Fetcher } from "./http";
 
 const IPOSEEK_BASE_URL = "https://www.iposeek.com";
 const IPOSEEK_NEW_STOCK_PAGE_URL = `${IPOSEEK_BASE_URL}/ipo-review/new-stock`;
 const IPOSEEK_NEW_STOCK_API_URL = `${IPOSEEK_BASE_URL}/aipo/api/v1/newShareIssuanceInfos`;
 const IPOSEEK_REFRESH_TOKEN_URL = `${IPOSEEK_BASE_URL}/api/auth/refresh-token`;
+
+export type IpoSeekAuthChangeCallback = (auth: IpoSeekAuth) => void | Promise<void>;
 
 const DEFAULT_QUERY = {
   board: "全部",
@@ -16,7 +18,7 @@ const DEFAULT_QUERY = {
   order: "desc"
 };
 
-interface IpoSeekAuth {
+export interface IpoSeekAuth {
   cookie?: string;
   accessToken?: string;
   deviceFingerprint?: string;
@@ -75,23 +77,82 @@ interface RawIpoSeekItem {
 
 export async function fetchIpoSeekNewStock(
   auth: IpoSeekAuth = {},
-  fetcher: Fetcher = fetch
+  fetcher: Fetcher = fetch,
+  onAuthChange?: IpoSeekAuthChangeCallback
 ): Promise<AShareIpoResponse> {
   const generatedAt = new Date().toISOString();
   const query = new URLSearchParams(DEFAULT_QUERY);
-  const refreshedAuth = shouldRefreshIpoSeekAccessToken(auth) ? await refreshIpoSeekAuth(fetcher, auth).catch(() => null) : null;
-  const headers = buildIpoSeekHeaders(refreshedAuth ?? auth);
 
-  const [listText, boardCounts, statusCounts] = await Promise.all([
-    fetchTextWithRetry(fetcher, `${IPOSEEK_NEW_STOCK_API_URL}?${query.toString()}`, { headers }, { timeoutMs: 15_000, retries: 1, retryDelayMs: 600 }),
-    fetchIpoSeekCounts(fetcher, `${IPOSEEK_NEW_STOCK_API_URL}/boardCounts?keyword=`, headers),
-    fetchIpoSeekCounts(fetcher, `${IPOSEEK_NEW_STOCK_API_URL}/issuanceStatusCounts?board=${encodeURIComponent(DEFAULT_QUERY.board)}&keyword=`, headers)
-  ]);
+  const state: { auth: IpoSeekAuth; lastRefreshError: Error | null; inFlight: Promise<boolean> | null } = {
+    auth,
+    lastRefreshError: null,
+    inFlight: null
+  };
 
+  const applyRefresh = (): Promise<boolean> => {
+    if (state.inFlight) {
+      return state.inFlight;
+    }
+    state.inFlight = (async () => {
+      try {
+        const refreshed = await refreshIpoSeekAuth(fetcher, state.auth);
+        if (!refreshed) {
+          return false;
+        }
+        state.auth = refreshed;
+        state.lastRefreshError = null;
+        if (onAuthChange) {
+          await onAuthChange(refreshed);
+        }
+        return true;
+      } catch (error) {
+        state.lastRefreshError = error instanceof Error ? error : new Error(String(error));
+        return false;
+      } finally {
+        state.inFlight = null;
+      }
+    })();
+    return state.inFlight;
+  };
+
+  if (shouldRefreshIpoSeekAccessToken(state.auth)) {
+    await applyRefresh();
+  }
+
+  const fetchAuthedText = async (url: string, timeoutMs: number): Promise<string> => {
+    let lastError: Error | null = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const headers = buildIpoSeekHeaders(state.auth);
+      const result = await fetchOnce(fetcher, url, headers, timeoutMs);
+      if (result.ok) {
+        return result.text;
+      }
+      lastError = result.error;
+      const recoverable = result.status === 401 || result.status === 403;
+      if (!recoverable) {
+        break;
+      }
+      const refreshed = await applyRefresh();
+      if (!refreshed) {
+        break;
+      }
+      await delay(200);
+    }
+    const refreshDetail = state.lastRefreshError ? ` (refresh attempt: ${state.lastRefreshError.message})` : "";
+    const baseMessage = lastError?.message ?? "IpoSeek request failed";
+    throw new Error(`${baseMessage}${refreshDetail}`);
+  };
+
+  const listText = await fetchAuthedText(`${IPOSEEK_NEW_STOCK_API_URL}?${query.toString()}`, 15_000);
   const parsed = parseIpoSeekListJson(listText);
   if (!Array.isArray(parsed.rows)) {
     throw new Error(parsed.message || "IpoSeek new stock response did not include rows");
   }
+
+  const [boardCounts, statusCounts] = await Promise.all([
+    fetchIpoSeekCounts(fetchAuthedText, `${IPOSEEK_NEW_STOCK_API_URL}/boardCounts?keyword=`),
+    fetchIpoSeekCounts(fetchAuthedText, `${IPOSEEK_NEW_STOCK_API_URL}/issuanceStatusCounts?board=${encodeURIComponent(DEFAULT_QUERY.board)}&keyword=`)
+  ]);
 
   const items = parsed.rows.map(normalizeIpoSeekItem);
   return {
@@ -149,18 +210,32 @@ export function parseIpoSeekListJson(json: string): RawIpoSeekListResponse {
   return parsed;
 }
 
+const BROWSER_USER_AGENT =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+
 function buildIpoSeekHeaders(auth: IpoSeekAuth): HeadersInit {
   const cookieAccessToken = extractCookieValue(auth.cookie, "access_token");
   const accessToken = auth.accessToken || cookieAccessToken;
+  const xsrfToken = extractCookieValue(auth.cookie, "XSRF-TOKEN");
+
   const headers: Record<string, string> = {
     accept: "application/json, text/plain, */*",
     "accept-language": "zh-CN,zh;q=0.9,en;q=0.8",
+    origin: IPOSEEK_BASE_URL,
     referer: IPOSEEK_NEW_STOCK_PAGE_URL,
-    "user-agent":
-      "Mozilla/5.0 (compatible; stock-dashboard/0.1; +https://stock.789567.xyz) AppleWebKit/537.36 Chrome/126 Safari/537.36",
+    "user-agent": BROWSER_USER_AGENT,
+    "sec-ch-ua": '"Chromium";v="126", "Not.A/Brand";v="24"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"macOS"',
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-origin",
     "x-device-fingerprint": auth.deviceFingerprint || "stock-dashboard-worker"
   };
 
+  if (xsrfToken) {
+    headers["x-xsrf-token"] = xsrfToken;
+  }
   if (auth.cookie) {
     headers.cookie = auth.cookie;
   }
@@ -176,29 +251,43 @@ async function refreshIpoSeekAuth(fetcher: Fetcher, auth: IpoSeekAuth): Promise<
     return null;
   }
 
+  const xsrfToken = extractCookieValue(auth.cookie, "XSRF-TOKEN");
+  const headers: Record<string, string> = {
+    accept: "application/json, text/plain, */*",
+    "accept-language": "zh-CN,zh;q=0.9,en;q=0.8",
+    "content-type": "application/json",
+    cookie: auth.cookie,
+    origin: IPOSEEK_BASE_URL,
+    referer: IPOSEEK_NEW_STOCK_PAGE_URL,
+    "user-agent": BROWSER_USER_AGENT,
+    "sec-ch-ua": '"Chromium";v="126", "Not.A/Brand";v="24"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"macOS"',
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-origin",
+    "x-device-fingerprint": auth.deviceFingerprint || "stock-dashboard-worker"
+  };
+  if (xsrfToken) {
+    headers["x-xsrf-token"] = xsrfToken;
+  }
+
   const response = await fetcher(IPOSEEK_REFRESH_TOKEN_URL, {
     method: "POST",
-    headers: {
-      accept: "application/json, text/plain, */*",
-      "accept-language": "zh-CN,zh;q=0.9,en;q=0.8",
-      "content-type": "application/json",
-      cookie: auth.cookie,
-      referer: IPOSEEK_NEW_STOCK_PAGE_URL,
-      "user-agent":
-        "Mozilla/5.0 (compatible; stock-dashboard/0.1; +https://stock.789567.xyz) AppleWebKit/537.36 Chrome/126 Safari/537.36",
-      "x-device-fingerprint": auth.deviceFingerprint || "stock-dashboard-worker"
-    },
+    headers,
     body: "{}"
   });
 
   if (!response.ok) {
-    return null;
+    const bodyText = await response.text().catch(() => "");
+    const snippet = bodyText.slice(0, 200);
+    throw new Error(`IpoSeek refresh-token failed: HTTP ${response.status} ${response.statusText}${snippet ? ` - ${snippet}` : ""}`);
   }
 
   const parsed = (await response.json()) as RawIpoSeekRefreshResponse;
   const accessToken = parsed.access_token ?? parsed.accessToken ?? null;
   if (!accessToken) {
-    return null;
+    throw new Error("IpoSeek refresh-token response did not include access_token");
   }
 
   return {
@@ -292,9 +381,12 @@ function mergeIpoSeekCookie(cookie: string | undefined, setCookies: string[], re
   return order.map((name) => `${name}=${entries.get(name) ?? ""}`).join("; ");
 }
 
-async function fetchIpoSeekCounts(fetcher: Fetcher, url: string, headers: HeadersInit): Promise<Record<string, number>> {
+async function fetchIpoSeekCounts(
+  fetchAuthedText: (url: string, timeoutMs: number) => Promise<string>,
+  url: string
+): Promise<Record<string, number>> {
   try {
-    const text = await fetchTextWithRetry(fetcher, url, { headers }, { timeoutMs: 10_000, retries: 1, retryDelayMs: 400 });
+    const text = await fetchAuthedText(url, 10_000);
     const parsed = JSON.parse(text) as Record<string, unknown>;
     return Object.fromEntries(
       Object.entries(parsed)
@@ -303,6 +395,39 @@ async function fetchIpoSeekCounts(fetcher: Fetcher, url: string, headers: Header
     );
   } catch {
     return {};
+  }
+}
+
+type FetchOnceResult =
+  | { ok: true; text: string }
+  | { ok: false; status: number; error: Error };
+
+async function fetchOnce(
+  fetcher: Fetcher,
+  url: string,
+  headers: HeadersInit,
+  timeoutMs: number
+): Promise<FetchOnceResult> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort("request timeout"), timeoutMs);
+  try {
+    const response = await fetcher(url, { headers, signal: controller.signal });
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        error: new Error(`HTTP ${response.status} ${response.statusText}`)
+      };
+    }
+    return { ok: true, text: await response.text() };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 0,
+      error: error instanceof Error ? error : new Error(String(error))
+    };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
