@@ -28,10 +28,17 @@ export default {
 
     if (url.pathname === "/api/ipo" && request.method === "GET") {
       try {
-        const aShare = await fetchIpoSeekWithFallback(env);
-        return json(await fetchTradesmartIpoTracker(fetch, aShare));
+        return json(await fetchTradesmartIpoTracker(fetch));
       } catch (error) {
         return jsonError("IPO data unavailable", error, 502);
+      }
+    }
+
+    if (url.pathname === "/api/ipo/a-share" && request.method === "GET") {
+      try {
+        return json(await fetchIpoSeekWithFallback(env));
+      } catch (error) {
+        return jsonError("A-share IPO data unavailable", error, 502);
       }
     }
 

@@ -1,7 +1,7 @@
 import { Building2, Landmark } from "lucide-react";
 import { useState } from "react";
 import type { IpoCalendarItem, IpoMarginRecord } from "../../../shared/types";
-import type { IpoLoadState } from "../../appTypes";
+import type { AShareIpoLoadState, IpoLoadState } from "../../appTypes";
 import { ErrorState, Loading, Metric } from "../../components/ui";
 import { AShareIpoPanel } from "./aShare/AShareIpoPanel";
 import { HkIpoPanel } from "./hk/HkIpoPanel";
@@ -9,7 +9,7 @@ import type { IpoFilter, IpoMarket } from "./ipoTypes";
 import { formatCount, formatDateOnly, formatRatio, getAShareStatusCount, getIpoReferenceDate, getIpoStage } from "./ipoUtils";
 import { IpoHeroSkeleton } from "./shared";
 
-export function IpoMonitorPage({ state }: { state: IpoLoadState }) {
+export function IpoMonitorPage({ state, aShareState }: { state: IpoLoadState; aShareState: AShareIpoLoadState }) {
   const [activeMarket, setActiveMarket] = useState<IpoMarket>("hk");
   const [activeFilter, setActiveFilter] = useState<IpoFilter>("all");
   const [expandedMarginSymbols, setExpandedMarginSymbols] = useState<Set<string>>(() => new Set());
@@ -36,7 +36,8 @@ export function IpoMonitorPage({ state }: { state: IpoLoadState }) {
   }
 
   const tracker = state.data;
-  const aShare = tracker.aShare;
+  const aShare = aShareState.status === "ready" ? aShareState.data : null;
+  const isASharePending = aShareState.status === "idle" || aShareState.status === "loading";
   const today = getIpoReferenceDate(tracker);
   const marginBySymbol = new Map(tracker.margin.records.map((record) => [record.symbol, record]));
   const sortedIpos = [...tracker.ipos].sort((a, b) =>
@@ -91,8 +92,11 @@ export function IpoMonitorPage({ state }: { state: IpoLoadState }) {
         <div className="command-metrics" aria-label="ipo summary">
           <Metric label="新股条目" value={String(tracker.count)} />
           <Metric label="招股中" value={String(openCount)} />
-          <Metric label="A股发行动态" value={formatCount(aShare?.total)} />
-          <Metric label="A股发行中" value={formatCount(getAShareStatusCount(aShare, "启动发行") + getAShareStatusCount(aShare, "发行中"))} />
+          <Metric label="A股发行动态" value={isASharePending ? "读取中" : formatCount(aShare?.total)} />
+          <Metric
+            label="A股发行中"
+            value={isASharePending ? "读取中" : formatCount(getAShareStatusCount(aShare, "启动发行") + getAShareStatusCount(aShare, "发行中"))}
+          />
         </div>
       </section>
 
@@ -108,7 +112,7 @@ export function IpoMonitorPage({ state }: { state: IpoLoadState }) {
       </section>
 
       {activeMarket === "aShare" ? (
-        <AShareIpoPanel aShare={aShare} />
+        <AShareIpoPanel state={aShareState} />
       ) : (
         <HkIpoPanel
           tracker={tracker}

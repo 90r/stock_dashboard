@@ -382,9 +382,13 @@ const ipoTracker = {
   }
 };
 
+const hkIpoTracker = { ...ipoTracker, aShare: null };
+const aShareIpoTracker = ipoTracker.aShare;
+
 test.beforeEach(async ({ page }) => {
   await page.route("**/api/snapshot", (route) => route.fulfill({ json: snapshot }));
-  await page.route("**/api/ipo", (route) => route.fulfill({ json: ipoTracker }));
+  await page.route("**/api/ipo", (route) => route.fulfill({ json: hkIpoTracker }));
+  await page.route("**/api/ipo/a-share", (route) => route.fulfill({ json: aShareIpoTracker }));
 });
 
 test("renders charts, category switch, and destination split", async ({ page }) => {
@@ -409,6 +413,21 @@ test("renders IPO calendar and margin pulse from API data", async ({ page }) => 
   await expect(page.locator(".ipo-calendar-table").getByText("雲英谷科技", { exact: true })).toBeVisible();
   await expect(page.getByText("4,147x").first()).toBeVisible();
   await expect(page.getByText("AAStocks HK IPO Calendar")).toBeVisible();
+});
+
+test("shows HK IPO while A-share issuance data is still loading", async ({ page }) => {
+  await page.unroute("**/api/ipo/a-share");
+  await page.route("**/api/ipo/a-share", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    await route.fulfill({ json: aShareIpoTracker });
+  });
+
+  await page.goto("/ipo");
+
+  await expect(page.getByRole("heading", { name: "IPO 监控雷达" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "孖展实时脉搏" })).toBeVisible();
+  await expect(page.getByText("03310.HK").first()).toBeVisible();
+  await expect(page.getByText("读取中").first()).toBeVisible();
 });
 
 test("renders A-share IPO issuance dynamics beside HK IPO", async ({ page }) => {

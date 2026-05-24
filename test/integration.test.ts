@@ -81,17 +81,24 @@ describe("scraper integrations with mocked HTTP", () => {
   });
 
   it("refreshes IpoSeek access token when a refresh cookie is available", async () => {
+    const staleToken = [
+      "eyJhbGciOiJIUzUxMiJ9",
+      "eyJzdWIiOiJpcG9vIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjE3MDAwMDAwMDF9",
+      "signature"
+    ].join(".");
     const fetcher = vi
       .fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: "fresh-token", expires_in: 3600 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: "fresh-token", expires_in: 3600 }), { status: 200, headers: { "set-cookie": "XSRF-TOKEN=fresh-xsrf; Path=/" } }))
       .mockResolvedValueOnce(new Response(IPOSEEK_NEW_STOCK_JSON, { status: 200 }))
       .mockResolvedValueOnce(new Response(IPOSEEK_BOARD_COUNTS_JSON, { status: 200 }))
       .mockResolvedValueOnce(new Response(IPOSEEK_STATUS_COUNTS_JSON, { status: 200 }));
 
-    await fetchIpoSeekNewStock({ cookie: "refresh_token=test-refresh; access_token=stale-token" }, fetcher as unknown as typeof fetch);
+    await fetchIpoSeekNewStock({ cookie: `refresh_token=test-refresh; access_token=${staleToken}` }, fetcher as unknown as typeof fetch);
 
     const listCall = fetcher.mock.calls[1];
     const init = listCall[1] as RequestInit;
     expect((init.headers as Record<string, string>).authorization).toBe("Bearer fresh-token");
+    expect((init.headers as Record<string, string>).cookie).toContain("access_token=fresh-token");
+    expect((init.headers as Record<string, string>).cookie).toContain("XSRF-TOKEN=fresh-xsrf");
   });
 });

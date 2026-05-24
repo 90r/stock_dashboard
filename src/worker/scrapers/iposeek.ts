@@ -31,7 +31,9 @@ interface RawIpoSeekListResponse {
 
 interface RawIpoSeekRefreshResponse {
   access_token?: string;
+  accessToken?: string;
   expires_in?: number;
+  expiresIn?: number;
 }
 
 interface RawIpoSeekItem {
@@ -77,11 +79,8 @@ export async function fetchIpoSeekNewStock(
 ): Promise<AShareIpoResponse> {
   const generatedAt = new Date().toISOString();
   const query = new URLSearchParams(DEFAULT_QUERY);
-  const refreshedAccessToken = auth.cookie ? await refreshIpoSeekAccessToken(fetcher, auth).catch(() => null) : null;
-  const headers = buildIpoSeekHeaders({
-    ...auth,
-    accessToken: refreshedAccessToken ?? auth.accessToken
-  });
+  const refreshedAuth = shouldRefreshIpoSeekAccessToken(auth) ? await refreshIpoSeekAuth(fetcher, auth).catch(() => null) : null;
+  const headers = buildIpoSeekHeaders(refreshedAuth ?? auth);
 
   const [listText, boardCounts, statusCounts] = await Promise.all([
     fetchTextWithRetry(fetcher, `${IPOSEEK_NEW_STOCK_API_URL}?${query.toString()}`, { headers }, { timeoutMs: 15_000, retries: 1, retryDelayMs: 600 }),
@@ -172,7 +171,7 @@ function buildIpoSeekHeaders(auth: IpoSeekAuth): HeadersInit {
   return headers;
 }
 
-async function refreshIpoSeekAccessToken(fetcher: Fetcher, auth: IpoSeekAuth): Promise<string | null> {
+async function refreshIpoSeekAuth(fetcher: Fetcher, auth: IpoSeekAuth): Promise<IpoSeekAuth | null> {
   if (!auth.cookie?.includes("refresh_token=")) {
     return null;
   }
@@ -197,7 +196,100 @@ async function refreshIpoSeekAccessToken(fetcher: Fetcher, auth: IpoSeekAuth): P
   }
 
   const parsed = (await response.json()) as RawIpoSeekRefreshResponse;
-  return parsed.access_token ?? null;
+  const accessToken = parsed.access_token ?? parsed.accessToken ?? null;
+  if (!accessToken) {
+    return null;
+  }
+
+  return {
+    ...auth,
+    accessToken,
+    cookie: mergeIpoSeekCookie(auth.cookie, readSetCookieHeaders(response.headers), { access_token: accessToken })
+  };
+}
+
+function shouldRefreshIpoSeekAccessToken(auth: IpoSeekAuth): boolean {
+  if (!auth.cookie?.includes("refresh_token=")) {
+    return false;
+  }
+
+  const accessToken = auth.accessToken || extractCookieValue(auth.cookie, "access_token");
+  const expiresAt = getJwtExpiresAt(accessToken);
+  if (!expiresAt) {
+    return true;
+  }
+
+  return expiresAt - Date.now() <= 5 * 60 * 1000;
+}
+
+function getJwtExpiresAt(token: string | null | undefined): number | null {
+  const payload = token?.split(".")[1];
+  if (!payload) {
+    return null;
+  }
+
+  try {
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const parsed = JSON.parse(atob(padded)) as { exp?: unknown };
+    return typeof parsed.exp === "number" && Number.isFinite(parsed.exp) ? parsed.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+function readSetCookieHeaders(headers: Headers): string[] {
+  const getSetCookie = (headers as Headers & { getSetCookie?: () => string[] }).getSetCookie;
+  if (getSetCookie) {
+    return getSetCookie.call(headers);
+  }
+
+  const setCookie = headers.get("set-cookie");
+  return setCookie ? splitSetCookieHeader(setCookie) : [];
+}
+
+function splitSetCookieHeader(header: string): string[] {
+  return header.split(/,(?=\s*[^;,=\s]+=[^;,]*)/).map((part) => part.trim()).filter(Boolean);
+}
+
+function mergeIpoSeekCookie(cookie: string | undefined, setCookies: string[], replacements: Record<string, string>): string {
+  const entries = new Map<string, string>();
+  const order: string[] = [];
+
+  for (const part of (cookie ?? "").split(";")) {
+    const trimmed = part.trim();
+    const separator = trimmed.indexOf("=");
+    if (separator <= 0) {
+      continue;
+    }
+    const name = trimmed.slice(0, separator);
+    if (!entries.has(name)) {
+      order.push(name);
+    }
+    entries.set(name, trimmed.slice(separator + 1));
+  }
+
+  for (const setCookie of setCookies) {
+    const pair = setCookie.split(";")[0]?.trim();
+    const separator = pair?.indexOf("=") ?? -1;
+    if (!pair || separator <= 0) {
+      continue;
+    }
+    const name = pair.slice(0, separator);
+    if (!entries.has(name)) {
+      order.push(name);
+    }
+    entries.set(name, pair.slice(separator + 1));
+  }
+
+  for (const [name, value] of Object.entries(replacements)) {
+    if (!entries.has(name)) {
+      order.push(name);
+    }
+    entries.set(name, value);
+  }
+
+  return order.map((name) => `${name}=${entries.get(name) ?? ""}`).join("; ");
 }
 
 async function fetchIpoSeekCounts(fetcher: Fetcher, url: string, headers: HeadersInit): Promise<Record<string, number>> {

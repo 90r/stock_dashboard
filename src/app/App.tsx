@@ -2,8 +2,8 @@ import { CalendarDays, Compass, Gauge, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import type { CategoryId } from "../shared/catalog";
-import type { ApiError, IpoTrackerResponse, SnapshotResponse } from "../shared/types";
-import type { AppRoute, IpoLoadState, LoadState, MainView, ModuleDefinition, ModuleId } from "./appTypes";
+import type { AShareIpoResponse, ApiError, IpoTrackerResponse, SnapshotResponse } from "../shared/types";
+import type { AppRoute, AShareIpoLoadState, IpoLoadState, LoadState, MainView, ModuleDefinition, ModuleId } from "./appTypes";
 import { ErrorState, Loading } from "./components/ui";
 import { HomePage } from "./features/home/HomePage";
 import { IpoMonitorPage } from "./features/ipo/IpoMonitorPage";
@@ -16,6 +16,7 @@ export default function App() {
   const [route, setRoute] = useState<AppRoute>(() => routeFromLocation());
   const [memoryState, setMemoryState] = useState<LoadState>({ status: "loading", data: null, error: null });
   const [ipoState, setIpoState] = useState<IpoLoadState>({ status: "loading", data: null, error: null });
+  const [aShareIpoState, setAShareIpoState] = useState<AShareIpoLoadState>({ status: "idle", data: null, error: null });
   const [selectedCategory, setSelectedCategory] = useState<CategoryId>("dram");
 
   useEffect(() => {
@@ -65,6 +66,7 @@ export default function App() {
     }
 
     let cancelled = false;
+    setAShareIpoState({ status: "idle", data: null, error: null });
 
     fetch("/api/ipo")
       .then(async (response) => {
@@ -90,6 +92,38 @@ export default function App() {
     };
   }, [ipoState.status, route.module]);
 
+  useEffect(() => {
+    if (ipoState.status !== "ready") {
+      return;
+    }
+
+    let cancelled = false;
+    setAShareIpoState({ status: "loading", data: null, error: null });
+
+    fetch("/api/ipo/a-share")
+      .then(async (response) => {
+        if (!response.ok) {
+          const body = (await response.json().catch(() => null)) as Partial<ApiError> | null;
+          throw new Error(body?.detail || body?.error || `HTTP ${response.status}`);
+        }
+        return response.json() as Promise<AShareIpoResponse>;
+      })
+      .then((data) => {
+        if (!cancelled) {
+          setAShareIpoState({ status: "ready", data, error: null });
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setAShareIpoState({ status: "error", data: null, error: error instanceof Error ? error.message : String(error) });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ipoState.status]);
+
   const activeModule = getModule(route.module);
   const shellStatus = getShellStatus(route, memoryState, ipoState);
 
@@ -103,6 +137,7 @@ export default function App() {
         route,
         memoryState,
         ipoState,
+        aShareIpoState,
         selectedCategory,
         setSelectedCategory,
         onModuleChange: (moduleId) => navigateToModule(moduleId, setRoute),
@@ -116,6 +151,7 @@ function renderRoute({
   route,
   memoryState,
   ipoState,
+  aShareIpoState,
   selectedCategory,
   setSelectedCategory,
   onModuleChange,
@@ -124,6 +160,7 @@ function renderRoute({
   route: AppRoute;
   memoryState: LoadState;
   ipoState: IpoLoadState;
+  aShareIpoState: AShareIpoLoadState;
   selectedCategory: CategoryId;
   setSelectedCategory: (category: CategoryId) => void;
   onModuleChange: (moduleId: ModuleId) => void;
@@ -134,11 +171,11 @@ function renderRoute({
   }
 
   if (route.module === "ipo") {
-    return <IpoMonitorPage state={ipoState} />;
+    return <IpoMonitorPage state={ipoState} aShareState={aShareIpoState} />;
   }
 
   if (route.module === "watchlist") {
-    return <WatchlistPage onNavigate={onModuleChange} />;
+    return <WatchlistPage />;
   }
 
   if (memoryState.status === "loading") {

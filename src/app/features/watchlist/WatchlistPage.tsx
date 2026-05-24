@@ -1,8 +1,7 @@
-import { Briefcase, Building2, CheckCircle2, CircleDollarSign, Newspaper, WalletCards } from "lucide-react";
-import type { ModuleId } from "../../appTypes";
+import { Building2, CircleDollarSign, Newspaper, WalletCards } from "lucide-react";
 import { Metric } from "../../components/ui";
 
-export function WatchlistPage({ onNavigate }: { onNavigate: (moduleId: ModuleId) => void }) {
+export function WatchlistPage() {
   const candidates = [
     { icon: <CircleDollarSign size={20} />, title: "汇率与利率", text: "USD/CNY、KRW/CNY、政策利率和期限利差。" },
     { icon: <Building2 size={20} />, title: "行业价格", text: "面板、被动元件、锂电材料、航运费率。" },
@@ -36,19 +35,6 @@ export function WatchlistPage({ onNavigate }: { onNavigate: (moduleId: ModuleId)
         ))}
       </section>
 
-      <section className="panel">
-        <div className="panel-head compact">
-          <div>
-            <p className="eyebrow">Live module</p>
-            <h2>IPO 监控已接入真实数据</h2>
-          </div>
-          <CheckCircle2 size={20} />
-        </div>
-        <button type="button" className="primary-action" onClick={() => onNavigate("ipo")}>
-          <Briefcase size={16} />
-          进入 IPO 监控
-        </button>
-      </section>
     </div>
   );
 }

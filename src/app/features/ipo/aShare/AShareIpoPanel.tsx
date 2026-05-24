@@ -1,6 +1,7 @@
 import { AlertTriangle, ArrowRight, Building2, CalendarClock, ExternalLink, Landmark } from "lucide-react";
-import type { AShareIpoIssuanceItem, AShareIpoResponse } from "../../../../shared/types";
-import { InfoPanel, Metric } from "../../../components/ui";
+import type { AShareIpoIssuanceItem } from "../../../../shared/types";
+import type { AShareIpoLoadState } from "../../../appTypes";
+import { ErrorState, InfoPanel, Loading, Metric } from "../../../components/ui";
 import { IpoStageBadge, SourceRow } from "../shared";
 import {
   averageNumber,
@@ -17,7 +18,16 @@ import {
   sumWanAmount
 } from "../ipoUtils";
 
-export function AShareIpoPanel({ aShare }: { aShare?: AShareIpoResponse | null }) {
+export function AShareIpoPanel({ state }: { state: AShareIpoLoadState }) {
+  if (state.status === "idle" || state.status === "loading") {
+    return <Loading label="采集 A 股发行动态" />;
+  }
+
+  if (state.status === "error") {
+    return <ErrorState message={state.error} />;
+  }
+
+  const aShare = state.data;
   const rows = aShare?.items ?? [];
   const latestRows = rows.slice(0, 8);
   const inProgress = getAShareStatusCount(aShare, "启动发行") + getAShareStatusCount(aShare, "发行中");
@@ -130,13 +140,6 @@ export function AShareIpoPanel({ aShare }: { aShare?: AShareIpoResponse | null }
             <AShareObservationRow label="平均审核天数" value={formatDays(averageNumber(rows.map((row) => row.auditDays)))} meta="本页样本" />
           </div>
           <p className="panel-note">金额单位沿用投行之声口径：募资总额、发行费用等字段为万元。</p>
-        </InfoPanel>
-        <InfoPanel title="和港股放一起的逻辑" eyebrow="market desk">
-          <div className="path-list">
-            <span>同属 IPO 监控：一个看港股申购与孖展，一个看 A 股发行与费用</span>
-            <span>同用发行/上市时间轴，方便比较市场节奏和资金占用</span>
-            <span>后续可以继续并入递表、审核、过会和注册批文状态</span>
-          </div>
         </InfoPanel>
       </section>
 
